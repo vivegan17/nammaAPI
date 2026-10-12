@@ -1,0 +1,10 @@
+[build]
+  publish = "."
+
+[build.environment]
+  PYTHON_VERSION = "3.12"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
