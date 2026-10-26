@@ -26,6 +26,5 @@ Step 4: Start chatting
 The application is now hosted and accessible both locally and through a live public tunnel:
 
 - **Local Web UI**: [http://localhost:5000](http://localhost:5000)
-- **Live Public URL**: [https://relationship-creatures-denied-mozilla.trycloudflare.com](https://relationship-creatures-denied-mozilla.trycloudflare.com)
 
 
