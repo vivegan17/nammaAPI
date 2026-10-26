@@ -23,7 +23,7 @@ Step 4: Start chatting
 
 ## Web Interface (Hosted)
 
-The application is now hosted and accessible both locally and through a live public tunnel:
+The application is now hosted and accessible :
 
 
 https://nammaapi.vercel.app
