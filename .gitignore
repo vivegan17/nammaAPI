@@ -7,3 +7,5 @@ env/
 venv/
 .vercel
 .netlify
+
+.vercel

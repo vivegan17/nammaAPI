@@ -48,7 +48,7 @@ def get_share_info():
     port = int(os.environ.get("PORT", 5000))
     public_url = os.environ.get(
         "PUBLIC_URL",
-        "https://relationship-creatures-denied-mozilla.trycloudflare.com"
+        "https://collar-config-bears-tba.trycloudflare.com"
     )
 
     return jsonify({
