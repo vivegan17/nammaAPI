@@ -1,217 +1,160 @@
-// nammaAPI - Multi-Model AI Hub with Cross-Model Shared Chat Memory
+// nammaAPI — Multi-Model AI Chat with Shared Memory
+
 let appConfig = null;
 
-// Application State
+// State
 let activeProviderId = localStorage.getItem('namma_active_provider') || 'claude';
 let activeModelId = localStorage.getItem('namma_active_model') || 'claude-3-5-sonnet-20241022';
 let activeSubProvider = null;
 let activeBaseUrl = localStorage.getItem('namma_active_base_url') || null;
-
-// Saved API Keys in localStorage: { openai: '...', gemini: '...', claude: '...', other: '...' }
 let savedKeys = JSON.parse(localStorage.getItem('namma_api_keys') || '{}');
-
-// Chat Memory across all models: [ { role, content, model, provider, timestamp } ]
 let chatMemory = JSON.parse(localStorage.getItem('namma_chat_memory') || '[]');
-
-// DOM Elements
-const configModal = document.getElementById('config-modal');
-const modalCloseBtn = document.getElementById('modal-close-btn');
-const modalCancelBtn = document.getElementById('modal-cancel-btn');
-const modalSaveBtn = document.getElementById('modal-save-btn');
-const openConfigBtn = document.getElementById('open-config-btn');
-const dockKeyBtn = document.getElementById('dock-key-btn');
-const newChatBtn = document.getElementById('new-chat-btn');
-const openShareBtn = document.getElementById('open-share-btn');
-const shareModal = document.getElementById('share-modal');
-const shareModalCloseBtn = document.getElementById('share-modal-close-btn');
-const shareModalDoneBtn = document.getElementById('share-modal-done-btn');
-const publicShareInput = document.getElementById('public-share-input');
-const lanShareInput = document.getElementById('lan-share-input');
-const localShareInput = document.getElementById('local-share-input');
-
-const navProvPills = document.querySelectorAll('.nav-prov-pill');
-const navModelSelect = document.getElementById('nav-model-select');
-const memoryCounterText = document.getElementById('memory-counter-text');
-const dockActiveModel = document.getElementById('dock-active-model');
-const navKeyLabel = document.getElementById('nav-key-label');
-
-const modalTabBtns = document.querySelectorAll('.modal-provider-tabs .tab-btn');
-const modalSubPlatformBox = document.getElementById('modal-sub-platform-box');
-const modalSubPills = document.getElementById('modal-sub-pills');
-const modalCustomUrlGroup = document.getElementById('modal-custom-url-group');
-const modalCustomUrlInput = document.getElementById('modal-custom-url-input');
-const modalModelsGrid = document.getElementById('modal-models-grid');
-const modalCustomModelBox = document.getElementById('modal-custom-model-box');
-const modalCustomModelInput = document.getElementById('modal-custom-model-input');
-const modalApiKeyInput = document.getElementById('modal-api-key-input');
-const modalKeyToggleBtn = document.getElementById('modal-key-toggle-btn');
-const modalKeyProviderName = document.getElementById('modal-key-provider-name');
-const modalKeySavedBadge = document.getElementById('modal-key-saved-badge');
-
-const chatStream = document.getElementById('chat-stream');
-const emptyState = document.getElementById('empty-state');
-const messagesList = document.getElementById('messages-list');
-const chatForm = document.getElementById('chat-form');
-const userInput = document.getElementById('user-input');
-const submitBtn = document.getElementById('submit-btn');
-
-// Pending query to send after key is configured
 let pendingMessage = null;
 
-// --- INITIALIZATION ---
+// DOM
+const $ = (s) => document.getElementById(s);
+const $$ = (s) => document.querySelectorAll(s);
+
+const configModal = $('config-modal');
+const shareModal = $('share-modal');
+const chatScroll = $('chat-scroll');
+const emptyState = $('empty-state');
+const messagesList = $('messages-list');
+const chatForm = $('chat-form');
+const userInput = $('user-input');
+const submitBtn = $('submit-btn');
+const navModelSelect = $('nav-model-select');
+const memoryDot = $('memory-dot');
+const memoryCounterText = $('memory-counter-text');
+const dockActiveModel = $('dock-active-model');
+const dockMemoryStatus = $('dock-memory-status');
+
+const modalApiKeyInput = $('modal-api-key-input');
+const modalKeyToggleBtn = $('modal-key-toggle-btn');
+const modalKeyProviderName = $('modal-key-provider-name');
+const modalKeySavedBadge = $('modal-key-saved-badge');
+const modalModelsGrid = $('modal-models-grid');
+const modalCustomModelBox = $('modal-custom-model-box');
+const modalCustomModelInput = $('modal-custom-model-input');
+const modalSubPlatformBox = $('modal-sub-platform-box');
+const modalSubPills = $('modal-sub-pills');
+const modalCustomUrlGroup = $('modal-custom-url-group');
+const modalCustomUrlInput = $('modal-custom-url-input');
+
+// Modal state
+let modalSelectedProvider = 'claude';
+let modalSelectedModel = 'claude-3-5-sonnet-20241022';
+let modalSelectedBaseUrl = null;
+
+// ── Init ────────────────────────────────────────
+
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         const res = await fetch('/api/config');
         const data = await res.json();
         appConfig = data.providers;
-    } catch (err) {
-        console.error('Failed to load configuration:', err);
+    } catch (e) {
+        console.error('Config load failed:', e);
     }
 
-    // Initialize UI with active provider and models
-    syncActiveProvider(activeProviderId, false);
-    renderSavedChatMemory();
+    syncProvider(activeProviderId, false);
+    renderMemory();
     updateMemoryBadge();
     fetchShareInfo();
-    bindEvents();
+    bind();
 });
 
 async function fetchShareInfo() {
     try {
         const res = await fetch('/api/share-info');
         const info = await res.json();
-        if (info.public_url && publicShareInput) publicShareInput.value = info.public_url;
-        if (info.lan_url && lanShareInput) lanShareInput.value = info.lan_url;
-        if (info.localhost_url && localShareInput) localShareInput.value = info.localhost_url;
-    } catch (err) {
-        console.warn('Could not refresh share info:', err);
+        const pub = $('public-share-input');
+        const lan = $('lan-share-input');
+        const loc = $('local-share-input');
+        if (info.public_url && pub) pub.value = info.public_url;
+        if (info.lan_url && lan) lan.value = info.lan_url;
+        if (info.localhost_url && loc) loc.value = info.localhost_url;
+    } catch (e) {
+        console.warn('Share info unavailable:', e);
     }
 }
 
-// --- EVENT HANDLERS ---
-function bindEvents() {
-    // Modal open & close
-    openConfigBtn.addEventListener('click', () => openModal(activeProviderId));
-    dockKeyBtn.addEventListener('click', () => openModal(activeProviderId));
+// ── Events ──────────────────────────────────────
 
-    // ALWAYS close modal when 'X' or 'Cancel' is clicked
-    modalCloseBtn.addEventListener('click', closeModal);
-    modalCancelBtn.addEventListener('click', closeModal);
-
-    // Backdrop click closes modal
-    configModal.addEventListener('click', (e) => {
-        if (e.target === configModal) closeModal();
-    });
-
-    // Escape key closes modal
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && configModal.classList.contains('active')) {
-            closeModal();
-        }
-    });
-
-    // Navbar provider pills
-    navProvPills.forEach(pill => {
-        pill.addEventListener('click', () => {
-            const pid = pill.dataset.providerId;
-            syncActiveProvider(pid, true);
-        });
-    });
-
-    // Share Modal open & close
-    if (openShareBtn) {
-        openShareBtn.addEventListener('click', () => {
-            fetchShareInfo();
-            shareModal.classList.add('active');
-        });
-    }
-
-    if (shareModalCloseBtn) {
-        shareModalCloseBtn.addEventListener('click', () => shareModal.classList.remove('active'));
-    }
-
-    if (shareModalDoneBtn) {
-        shareModalDoneBtn.addEventListener('click', () => shareModal.classList.remove('active'));
-    }
-
-    if (shareModal) {
-        shareModal.addEventListener('click', (e) => {
-            if (e.target === shareModal) shareModal.classList.remove('active');
-        });
-    }
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            if (shareModal && shareModal.classList.contains('active')) {
-                shareModal.classList.remove('active');
-            }
-        }
-    });
-
-    // Share link copy buttons
-    document.querySelectorAll('.channel-copy-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const inputId = btn.dataset.inputId;
-            const inputEl = document.getElementById(inputId);
-            if (inputEl) {
-                inputEl.select();
-                navigator.clipboard.writeText(inputEl.value).then(() => {
-                    const originalText = btn.textContent;
-                    btn.textContent = 'Copied!';
-                    btn.classList.add('copied');
-                    setTimeout(() => {
-                        btn.textContent = originalText;
-                        btn.classList.remove('copied');
-                    }, 2000);
-                }).catch(() => {
-                    document.execCommand('copy');
-                    btn.textContent = 'Copied!';
-                    btn.classList.add('copied');
-                    setTimeout(() => {
-                        btn.textContent = 'Copy';
-                        btn.classList.remove('copied');
-                    }, 2000);
-                });
-            }
-        });
-    });
-
-    // Navbar model dropdown change
-    navModelSelect.addEventListener('change', () => {
-        activeModelId = navModelSelect.value;
-        localStorage.setItem('namma_active_model', activeModelId);
-        updateDockMeta();
-    });
-
-    // Modal provider tab change
-    modalTabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const pid = btn.dataset.providerId;
-            setupModalForProvider(pid);
-        });
-    });
-
-    // Modal key visibility toggle
-    modalKeyToggleBtn.addEventListener('click', () => {
-        const isPass = modalApiKeyInput.type === 'password';
-        modalApiKeyInput.type = isPass ? 'text' : 'password';
-    });
-
-    // Modal Save & Apply button
-    modalSaveBtn.addEventListener('click', () => {
-        saveModalSettings();
+function bind() {
+    // Config modal
+    $('open-config-btn').addEventListener('click', () => openModal(activeProviderId));
+    $('dock-key-btn').addEventListener('click', () => openModal(activeProviderId));
+    $('modal-close-btn').addEventListener('click', closeModal);
+    $('modal-cancel-btn').addEventListener('click', closeModal);
+    $('modal-save-btn').addEventListener('click', () => {
+        saveModal();
         closeModal();
         if (pendingMessage) {
             sendMessage(pendingMessage);
             pendingMessage = null;
         }
     });
+    configModal.addEventListener('click', (e) => { if (e.target === configModal) closeModal(); });
 
-    // New Chat / Clear Memory
-    newChatBtn.addEventListener('click', () => {
-        if (chatMemory.length > 0 && !confirm('Start a new chat? Shared memory for this conversation will be cleared.')) {
-            return;
+    // Share modal
+    $('open-share-btn').addEventListener('click', () => { fetchShareInfo(); shareModal.classList.add('open'); });
+    $('share-modal-close-btn').addEventListener('click', () => shareModal.classList.remove('open'));
+    $('share-modal-done-btn').addEventListener('click', () => shareModal.classList.remove('open'));
+    shareModal.addEventListener('click', (e) => { if (e.target === shareModal) shareModal.classList.remove('open'); });
+
+    // Escape closes modals
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (configModal.classList.contains('open')) closeModal();
+            if (shareModal.classList.contains('open')) shareModal.classList.remove('open');
         }
+    });
+
+    // Copy buttons
+    $$('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const input = $(btn.dataset.inputId);
+            if (!input) return;
+            navigator.clipboard.writeText(input.value).then(() => {
+                btn.textContent = 'Copied';
+                btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+            }).catch(() => {
+                input.select();
+                document.execCommand('copy');
+                btn.textContent = 'Copied';
+                btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+            });
+        });
+    });
+
+    // Provider segmented control
+    $$('.seg-btn').forEach(btn => {
+        btn.addEventListener('click', () => syncProvider(btn.dataset.providerId, true));
+    });
+
+    // Model dropdown
+    navModelSelect.addEventListener('change', () => {
+        activeModelId = navModelSelect.value;
+        localStorage.setItem('namma_active_model', activeModelId);
+        updateDock();
+    });
+
+    // Modal provider tabs
+    $$('.tab-item').forEach(btn => {
+        btn.addEventListener('click', () => setupModalFor(btn.dataset.providerId));
+    });
+
+    // Key toggle
+    modalKeyToggleBtn.addEventListener('click', () => {
+        modalApiKeyInput.type = modalApiKeyInput.type === 'password' ? 'text' : 'password';
+    });
+
+    // New chat
+    $('new-chat-btn').addEventListener('click', () => {
+        if (chatMemory.length > 0 && !confirm('Clear conversation and memory?')) return;
         chatMemory = [];
         localStorage.removeItem('namma_chat_memory');
         messagesList.innerHTML = '';
@@ -219,11 +162,10 @@ function bindEvents() {
         updateMemoryBadge();
     });
 
-    // Suggestion chips
-    document.querySelectorAll('.chip').forEach(chip => {
-        chip.addEventListener('click', () => {
-            const prompt = chip.dataset.prompt;
-            userInput.value = prompt;
+    // Suggestions
+    $$('.suggestion').forEach(s => {
+        s.addEventListener('click', () => {
+            userInput.value = s.dataset.prompt;
             userInput.style.height = 'auto';
             submitBtn.disabled = false;
             userInput.focus();
@@ -231,7 +173,7 @@ function bindEvents() {
         });
     });
 
-    // Input auto-expand & send
+    // Textarea
     userInput.addEventListener('input', () => {
         userInput.style.height = 'auto';
         userInput.style.height = `${Math.min(userInput.scrollHeight, 140)}px`;
@@ -241,162 +183,69 @@ function bindEvents() {
     userInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            if (!submitBtn.disabled) {
-                chatForm.dispatchEvent(new Event('submit'));
-            }
+            if (!submitBtn.disabled) chatForm.dispatchEvent(new Event('submit'));
         }
     });
 
     chatForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const text = userInput.value.trim();
-        if (!text) return;
-        sendMessage(text);
+        if (text) sendMessage(text);
     });
 }
 
-function openModal(providerId) {
-    setupModalForProvider(providerId || activeProviderId);
-    configModal.classList.add('active');
+// ── Modal ───────────────────────────────────────
+
+function openModal(pid) {
+    setupModalFor(pid || activeProviderId);
+    configModal.classList.add('open');
 }
 
 function closeModal() {
-    configModal.classList.remove('active');
+    configModal.classList.remove('open');
 }
 
-// --- PROVIDER & MODEL SYNCHRONIZATION ---
-function syncActiveProvider(pid, autoSelectFirstModel = false) {
-    activeProviderId = pid;
-    localStorage.setItem('namma_active_provider', pid);
-
-    // Update navbar provider pills
-    navProvPills.forEach(pill => {
-        pill.classList.toggle('active', pill.dataset.providerId === pid);
-    });
-
-    if (!appConfig) return;
-
-    const keyMap = { "openai": "1", "gemini": "2", "claude": "3", "other": "4" };
-    const pData = appConfig[keyMap[pid]];
-
-    // Populate navbar model dropdown
-    navModelSelect.innerHTML = '';
-    let models = [];
-
-    if (pid === 'other') {
-        const sub = pData.sub_providers["1"]; // Default to DeepSeek
-        activeSubProvider = sub;
-        activeBaseUrl = sub.base_url;
-        models = sub.models || [];
-    } else {
-        models = pData.models || [];
-    }
-
-    models.forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m.id;
-        opt.textContent = `${m.name} (${m.id})`;
-        navModelSelect.appendChild(opt);
-    });
-
-    // Add Custom Model option
-    const customOpt = document.createElement('option');
-    customOpt.value = 'custom';
-    customOpt.textContent = '✏️ Custom Model...';
-    navModelSelect.appendChild(customOpt);
-
-    // Set active model
-    const hasModel = models.some(m => m.id === activeModelId);
-    if (autoSelectFirstModel || !hasModel) {
-        activeModelId = models.length > 0 ? models[0].id : 'custom';
-        localStorage.setItem('namma_active_model', activeModelId);
-    }
-    navModelSelect.value = activeModelId;
-
-    updateDockMeta();
-    updateKeyNavBadge();
-}
-
-function updateDockMeta() {
-    dockActiveModel.textContent = activeModelId;
-}
-
-function updateKeyNavBadge() {
-    const key = savedKeys[activeProviderId];
-    if (key && key.trim()) {
-        navKeyLabel.textContent = 'Key: Configured';
-        navKeyLabel.parentElement.classList.add('configured');
-    } else {
-        navKeyLabel.textContent = 'Add API Key';
-        navKeyLabel.parentElement.classList.remove('configured');
-    }
-}
-
-function updateMemoryBadge() {
-    const count = chatMemory.length;
-    memoryCounterText.textContent = `Memory: Shared (${count} msg${count === 1 ? '' : 's'})`;
-    const dot = document.querySelector('.memory-dot');
-    if (dot) {
-        dot.classList.toggle('has-memory', count > 0);
-    }
-}
-
-// --- MODAL CONFIGURATION SETUP ---
-let modalSelectedProvider = 'claude';
-let modalSelectedModel = 'claude-3-5-sonnet-20241022';
-let modalSelectedBaseUrl = null;
-
-function setupModalForProvider(pid) {
+function setupModalFor(pid) {
     modalSelectedProvider = pid;
 
-    // Tabs
-    modalTabBtns.forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.providerId === pid);
-    });
+    $$('.tab-item').forEach(b => b.classList.toggle('active', b.dataset.providerId === pid));
 
     if (!appConfig) return;
 
-    const keyMap = { "openai": "1", "gemini": "2", "claude": "3", "other": "4" };
+    const keyMap = { openai: '1', gemini: '2', claude: '3', other: '4' };
     const pData = appConfig[keyMap[pid]];
 
     modalKeyProviderName.textContent = pData.name;
 
-    // API Key field
-    const existingKey = savedKeys[pid] || '';
-    modalApiKeyInput.value = existingKey;
+    const existing = savedKeys[pid] || '';
+    modalApiKeyInput.value = existing;
+    modalKeySavedBadge.classList.toggle('hidden', !existing);
 
-    const placeholders = {
-        "claude": "sk-ant-api03-...",
-        "openai": "sk-proj-...",
-        "gemini": "AIzaSy...",
-        "other": "sk-..."
-    };
-    modalApiKeyInput.placeholder = placeholders[pid] || "Enter API key...";
-    modalKeySavedBadge.classList.toggle('hidden', !existingKey);
+    const placeholders = { claude: 'sk-ant-api03-…', openai: 'sk-proj-…', gemini: 'AIzaSy…', other: 'sk-…' };
+    modalApiKeyInput.placeholder = placeholders[pid] || 'Enter API key…';
 
-    // Models list
     if (pid === 'other') {
         modalSubPlatformBox.classList.remove('hidden');
-        renderModalSubPlatforms(pData.sub_providers);
+        renderSubPlatforms(pData.sub_providers);
     } else {
         modalSubPlatformBox.classList.add('hidden');
-        renderModalModels(pData.models, pData.name);
+        renderModels(pData.models, pData.name);
     }
 }
 
-function renderModalSubPlatforms(subProviders) {
+function renderSubPlatforms(subs) {
     modalSubPills.innerHTML = '';
-    const keys = Object.keys(subProviders);
+    const keys = Object.keys(subs);
 
-    keys.forEach((k, idx) => {
-        const sp = subProviders[k];
+    keys.forEach((k, i) => {
+        const sp = subs[k];
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = `sub-pill ${idx === 0 ? 'active' : ''}`;
+        btn.className = `pill-btn${i === 0 ? ' active' : ''}`;
         btn.textContent = sp.name;
 
         btn.addEventListener('click', () => {
-            document.querySelectorAll('#modal-sub-pills .sub-pill').forEach(b => b.classList.remove('active'));
+            $$('#modal-sub-pills .pill-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             modalSelectedBaseUrl = sp.base_url;
 
@@ -407,70 +256,66 @@ function renderModalSubPlatforms(subProviders) {
                 modalCustomUrlGroup.classList.add('hidden');
             }
 
-            renderModalModels(sp.models || [], sp.name);
+            renderModels(sp.models || [], sp.name);
         });
 
         modalSubPills.appendChild(btn);
     });
 
     if (keys.length > 0) {
-        modalSelectedBaseUrl = subProviders[keys[0]].base_url;
-        renderModalModels(subProviders[keys[0]].models || [], subProviders[keys[0]].name);
+        modalSelectedBaseUrl = subs[keys[0]].base_url;
+        renderModels(subs[keys[0]].models || [], subs[keys[0]].name);
     }
 }
 
-function renderModalModels(models, providerName) {
+function renderModels(models) {
     modalModelsGrid.innerHTML = '';
     modalCustomModelBox.classList.add('hidden');
 
-    models.forEach((m, idx) => {
-        const item = document.createElement('div');
-        const isCurrent = m.id === activeModelId || idx === 0;
-        item.className = `modal-model-card ${isCurrent ? 'selected' : ''}`;
-        item.innerHTML = `
-            <div class="card-meta">
-                <strong>${m.name}</strong>
-                <span>${m.desc}</span>
+    models.forEach((m, i) => {
+        const card = document.createElement('div');
+        const isCurrent = m.id === activeModelId || i === 0;
+        card.className = `model-card${isCurrent ? ' selected' : ''}`;
+        card.innerHTML = `
+            <div class="model-card-info">
+                <strong>${esc(m.name)}</strong>
+                <span>${esc(m.desc)}</span>
             </div>
-            <div class="check-circle">✓</div>
+            <span class="model-check">✓</span>
         `;
 
-        if (isCurrent) {
-            modalSelectedModel = m.id;
-        }
+        if (isCurrent) modalSelectedModel = m.id;
 
-        item.addEventListener('click', () => {
-            document.querySelectorAll('.modal-model-card').forEach(c => c.classList.remove('selected'));
-            item.classList.add('selected');
+        card.addEventListener('click', () => {
+            $$('.model-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
             modalSelectedModel = m.id;
             modalCustomModelBox.classList.add('hidden');
         });
 
-        modalModelsGrid.appendChild(item);
+        modalModelsGrid.appendChild(card);
     });
 
-    // Custom model card
-    const customItem = document.createElement('div');
-    customItem.className = 'modal-model-card full-span';
-    customItem.innerHTML = `
-        <div class="card-meta">
-            <strong>Custom Model</strong>
-            <span>Enter any specific model identifier</span>
+    // Custom option
+    const custom = document.createElement('div');
+    custom.className = 'model-card full';
+    custom.innerHTML = `
+        <div class="model-card-info">
+            <strong>Custom model</strong>
+            <span>Enter any model identifier</span>
         </div>
-        <div class="check-circle">✓</div>
+        <span class="model-check">✓</span>
     `;
-
-    customItem.addEventListener('click', () => {
-        document.querySelectorAll('.modal-model-card').forEach(c => c.classList.remove('selected'));
-        customItem.classList.add('selected');
+    custom.addEventListener('click', () => {
+        $$('.model-card').forEach(c => c.classList.remove('selected'));
+        custom.classList.add('selected');
         modalCustomModelBox.classList.remove('hidden');
         modalSelectedModel = modalCustomModelInput.value.trim() || 'custom';
     });
-
-    modalModelsGrid.appendChild(customItem);
+    modalModelsGrid.appendChild(custom);
 }
 
-function saveModalSettings() {
+function saveModal() {
     const key = modalApiKeyInput.value.trim();
     if (key) {
         savedKeys[modalSelectedProvider] = key;
@@ -478,8 +323,8 @@ function saveModalSettings() {
     }
 
     if (modalCustomModelBox && !modalCustomModelBox.classList.contains('hidden')) {
-        const customVal = modalCustomModelInput.value.trim();
-        if (customVal) modalSelectedModel = customVal;
+        const v = modalCustomModelInput.value.trim();
+        if (v) modalSelectedModel = v;
     }
 
     activeModelId = modalSelectedModel;
@@ -490,28 +335,88 @@ function saveModalSettings() {
         localStorage.setItem('namma_active_base_url', activeBaseUrl);
     }
 
-    syncActiveProvider(modalSelectedProvider, false);
+    syncProvider(modalSelectedProvider, false);
 }
 
-// --- CHAT & PERSISTENT SHARED MEMORY ---
-function renderSavedChatMemory() {
+// ── Provider Sync ───────────────────────────────
+
+function syncProvider(pid, autoFirst = false) {
+    activeProviderId = pid;
+    localStorage.setItem('namma_active_provider', pid);
+
+    $$('.seg-btn').forEach(b => b.classList.toggle('active', b.dataset.providerId === pid));
+
+    if (!appConfig) return;
+
+    const keyMap = { openai: '1', gemini: '2', claude: '3', other: '4' };
+    const pData = appConfig[keyMap[pid]];
+
+    navModelSelect.innerHTML = '';
+    let models = [];
+
+    if (pid === 'other') {
+        const sub = pData.sub_providers['1'];
+        activeSubProvider = sub;
+        activeBaseUrl = sub.base_url;
+        models = sub.models || [];
+    } else {
+        models = pData.models || [];
+    }
+
+    models.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.name;
+        navModelSelect.appendChild(opt);
+    });
+
+    const customOpt = document.createElement('option');
+    customOpt.value = 'custom';
+    customOpt.textContent = 'Custom…';
+    navModelSelect.appendChild(customOpt);
+
+    const hasModel = models.some(m => m.id === activeModelId);
+    if (autoFirst || !hasModel) {
+        activeModelId = models.length > 0 ? models[0].id : 'custom';
+        localStorage.setItem('namma_active_model', activeModelId);
+    }
+    navModelSelect.value = activeModelId;
+
+    updateDock();
+    updateKeyIndicator();
+}
+
+function updateDock() {
+    dockActiveModel.textContent = activeModelId;
+}
+
+function updateKeyIndicator() {
+    const btn = $('open-config-btn');
+    const key = savedKeys[activeProviderId];
+    btn.classList.toggle('has-key', !!(key && key.trim()));
+}
+
+function updateMemoryBadge() {
+    const n = chatMemory.length;
+    memoryCounterText.textContent = `${n} msg${n === 1 ? '' : 's'}`;
+    memoryDot.classList.toggle('active', n > 0);
+    dockMemoryStatus.textContent = n > 0 ? `${n} messages` : 'shared';
+}
+
+// ── Chat ────────────────────────────────────────
+
+function renderMemory() {
     if (!chatMemory || chatMemory.length === 0) {
         emptyState.classList.remove('hidden');
         return;
     }
-
     emptyState.classList.add('hidden');
     messagesList.innerHTML = '';
-
-    chatMemory.forEach(msg => {
-        appendMessageBubble(msg.role, msg.content, msg.model, msg.provider);
-    });
+    chatMemory.forEach(m => addBubble(m.role, m.content, m.model, m.provider));
 }
 
 async function sendMessage(text) {
     const key = savedKeys[activeProviderId];
-
-    // Check if key is available
     if (!key || !key.trim()) {
         pendingMessage = text;
         openModal(activeProviderId);
@@ -523,70 +428,47 @@ async function sendMessage(text) {
     userInput.style.height = 'auto';
     submitBtn.disabled = true;
 
-    // 1. Append User Message
-    const userMsgObj = {
-        role: 'user',
-        content: text,
-        model: null,
-        provider: null,
-        timestamp: Date.now()
-    };
-    appendMessageBubble('user', text);
-    chatMemory.push(userMsgObj);
+    // User message
+    chatMemory.push({ role: 'user', content: text, model: null, provider: null, timestamp: Date.now() });
+    addBubble('user', text);
     localStorage.setItem('namma_chat_memory', JSON.stringify(chatMemory));
     updateMemoryBadge();
 
-    // 2. Append Thinking Row
-    const thinkingRow = appendThinkingBubble();
+    // Thinking indicator
+    const thinking = addThinking();
 
-    // 3. Prepare payload with full cross-model chat memory!
-    // Format message history for standard AI client
-    const apiMessages = chatMemory.map(m => ({
-        role: m.role,
-        content: m.content
-    }));
+    const apiMessages = chatMemory.map(m => ({ role: m.role, content: m.content }));
 
     try {
-        const payload = {
-            provider_id: activeProviderId,
-            model_id: activeModelId,
-            api_key: key,
-            base_url: activeBaseUrl,
-            messages: apiMessages
-        };
-
         const res = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({
+                provider_id: activeProviderId,
+                model_id: activeModelId,
+                api_key: key,
+                base_url: activeBaseUrl,
+                messages: apiMessages
+            })
         });
 
         const data = await res.json();
-        thinkingRow.remove();
+        thinking.remove();
 
         if (res.ok && data.success) {
-            const aiMsgObj = {
-                role: 'assistant',
-                content: data.reply,
-                model: activeModelId,
-                provider: activeProviderId,
-                timestamp: Date.now()
-            };
-            appendMessageBubble('assistant', data.reply, activeModelId, activeProviderId);
-            chatMemory.push(aiMsgObj);
+            chatMemory.push({ role: 'assistant', content: data.reply, model: activeModelId, provider: activeProviderId, timestamp: Date.now() });
+            addBubble('assistant', data.reply, activeModelId, activeProviderId);
             localStorage.setItem('namma_chat_memory', JSON.stringify(chatMemory));
             updateMemoryBadge();
         } else {
-            const errorMsg = data.error || 'Failed to receive response from provider.';
-            appendErrorBubble(errorMsg);
-            // Remove user message from memory if request failed
+            addError(data.error || 'Failed to get a response.');
             chatMemory.pop();
             localStorage.setItem('namma_chat_memory', JSON.stringify(chatMemory));
             updateMemoryBadge();
         }
     } catch (err) {
-        thinkingRow.remove();
-        appendErrorBubble(`Network error: ${err.message}`);
+        thinking.remove();
+        addError(`Network error: ${err.message}`);
         chatMemory.pop();
         localStorage.setItem('namma_chat_memory', JSON.stringify(chatMemory));
         updateMemoryBadge();
@@ -596,78 +478,63 @@ async function sendMessage(text) {
     }
 }
 
-function appendMessageBubble(role, content, modelId = null, providerId = null) {
+function addBubble(role, content, modelId = null, providerId = null) {
     const row = document.createElement('div');
-    row.className = `message-row ${role}`;
+    row.className = `msg-row ${role}`;
 
     if (role === 'user') {
-        row.innerHTML = `
-            <div class="user-bubble">${escapeHtml(content)}</div>
-        `;
+        row.innerHTML = `<div class="user-bubble">${esc(content)}</div>`;
     } else {
         const parsed = marked.parse(content);
-        const provIcons = { claude: '🧠 Claude', gemini: '✨ Gemini', openai: '⚡ OpenAI', other: '🚀 Model' };
-        const provTag = provIcons[providerId] || 'AI';
-        const modelLabel = modelId ? `${provTag} · ${modelId}` : 'nammaAPI';
+        const labels = { claude: 'Claude', gemini: 'Gemini', openai: 'OpenAI', other: 'Model' };
+        const label = modelId ? `${labels[providerId] || 'AI'} · ${modelId}` : 'nammaAPI';
 
         row.innerHTML = `
-            <div class="ai-avatar">AI</div>
-            <div class="ai-bubble-container">
-                <div class="model-badge-tag">${escapeHtml(modelLabel)}</div>
+            <div class="ai-col">
+                <span class="msg-meta">${esc(label)}</span>
                 <div class="ai-bubble">${parsed}</div>
             </div>
         `;
-
-        // Highlight code blocks
         row.querySelectorAll('pre code').forEach(b => hljs.highlightElement(b));
     }
 
     messagesList.appendChild(row);
-    chatStream.scrollTop = chatStream.scrollHeight;
+    chatScroll.scrollTop = chatScroll.scrollHeight;
     return row;
 }
 
-function appendThinkingBubble() {
+function addThinking() {
     const row = document.createElement('div');
-    row.className = 'message-row assistant';
+    row.className = 'msg-row assistant';
     row.innerHTML = `
-        <div class="ai-avatar">AI</div>
-        <div class="ai-bubble-container">
-            <div class="model-badge-tag">${escapeHtml(activeModelId)}</div>
+        <div class="ai-col">
+            <span class="msg-meta">${esc(activeModelId)}</span>
             <div class="ai-bubble thinking-bubble">
-                <span class="pulsing-text">Thinking with shared memory context...</span>
+                <span class="pulsing">Thinking…</span>
             </div>
         </div>
     `;
     messagesList.appendChild(row);
-    chatStream.scrollTop = chatStream.scrollHeight;
+    chatScroll.scrollTop = chatScroll.scrollHeight;
     return row;
 }
 
-function appendErrorBubble(errMsg) {
+function addError(msg) {
     const row = document.createElement('div');
-    row.className = 'message-row assistant';
+    row.className = 'msg-row assistant';
     row.innerHTML = `
-        <div class="ai-avatar error-avatar">!</div>
-        <div class="ai-bubble-container">
+        <div class="ai-col">
             <div class="ai-bubble error-bubble">
-                <strong>API Request Failed</strong>
-                <p>${escapeHtml(errMsg)}</p>
-                <button type="button" class="error-action-btn" onclick="openModal('${activeProviderId}')">
-                    Update ${activeProviderId.toUpperCase()} API Key
-                </button>
+                <div class="error-label">Request failed</div>
+                <div class="error-detail">${esc(msg)}</div>
+                <button type="button" class="error-action" onclick="openModal('${activeProviderId}')">Update API key</button>
             </div>
         </div>
     `;
     messagesList.appendChild(row);
-    chatStream.scrollTop = chatStream.scrollHeight;
+    chatScroll.scrollTop = chatScroll.scrollHeight;
 }
 
-function escapeHtml(str) {
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }

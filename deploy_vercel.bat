@@ -2,12 +2,9 @@
 setlocal
 cd /d "%~dp0"
 echo ========================================================
-echo          Deploying nammaAPI to Vercel
+echo          Deploying nammaAPI to Vercel (Production)
 echo ========================================================
 echo.
-echo If this is your first time, it will prompt you to log in to Vercel.
-echo Press Enter on the default prompts to deploy!
-echo.
-call npx vercel
+call npx.cmd vercel --prod --yes
 echo.
 pause
