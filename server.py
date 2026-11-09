@@ -48,7 +48,7 @@ def get_share_info():
     port = int(os.environ.get("PORT", 5000))
     public_url = os.environ.get(
         "PUBLIC_URL",
-        "https://collar-config-bears-tba.trycloudflare.com"
+        "https://ai-multi-model-cli.vercel.app"
     )
 
     return jsonify({
