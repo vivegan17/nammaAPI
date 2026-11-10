@@ -26,5 +26,5 @@ Step 4: Start chatting
 The application is now hosted and accessible :
 
 
-https://nammaapi.vercel.app
+https://nammaapi.vercel.app/
 
