@@ -1,100 +1,88 @@
-// nammaAPI — Studio Application Logic & Multi-Model Coordinator
+// nammaAPI — Studio Workspace Controller
 
 let appConfig = null;
 
 // Application State
 let activeProviderId = localStorage.getItem('namma_active_provider') || 'claude';
 let activeModelId = localStorage.getItem('namma_active_model') || 'claude-3-5-sonnet-20241022';
-let activeSubProvider = null;
 let activeBaseUrl = localStorage.getItem('namma_active_base_url') || null;
 
-// Saved Keys & Chat Memory
+// Persistent Local Data
 let savedKeys = JSON.parse(localStorage.getItem('namma_api_keys') || '{}');
 let chatMemory = JSON.parse(localStorage.getItem('namma_chat_memory') || '[]');
 let pendingMessage = null;
 
-// SVGs for Providers
-const PROVIDER_SVGS = {
-    claude: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z"></path><path d="M9 21h6"></path></svg>`,
-    gemini: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`,
-    openai: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>`,
-    other: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`
+const PROVIDER_NAMES = {
+    claude: 'Anthropic Claude',
+    gemini: 'Google Gemini',
+    openai: 'OpenAI',
+    other: 'DeepSeek / Custom'
 };
 
-const PROVIDER_LABELS = {
-    claude: "Anthropic Claude",
-    gemini: "Google Gemini",
-    openai: "OpenAI",
-    other: "DeepSeek / Custom"
+const PROVIDER_COLORS = {
+    claude: '#d97706',
+    gemini: '#38bdf8',
+    openai: '#10b981',
+    other: '#a855f7'
 };
 
-// DOM Elements
+// DOM Utilities
 const $ = (id) => document.getElementById(id);
 const $$ = (sel) => document.querySelectorAll(sel);
 
-// Main View & Sidebar
-const sidebar = $('sidebar');
-const sidebarCloseBtn = $('sidebar-close-btn');
-const sidebarOpenBtn = $('sidebar-open-btn');
-const newChatBtn = $('new-chat-btn');
-const chatFeed = $('chat-feed');
-const heroEmptyState = $('hero-empty-state');
-const messagesContainer = $('messages-container');
+// Main Views
+const chatViewport = $('chat-viewport');
+const quietHero = $('quiet-hero');
+const conversationStream = $('conversation-stream');
 const chatForm = $('chat-form');
 const userInput = $('user-input');
 const submitBtn = $('submit-btn');
-const charCounter = $('char-counter');
 
-// Header & Navigation
-const headerModelDropdownBtn = $('header-model-dropdown-btn');
-const headerModelLabel = $('header-model-label');
-const headerProvIcon = $('header-prov-icon');
-const modelMenuPopover = $('model-menu-popover');
+// Topbar Controls
+const modelPopoverTrigger = $('model-popover-trigger');
+const activeProvDot = $('active-prov-dot');
+const activeModelText = $('active-model-text');
+const modelDropdown = $('model-dropdown');
 const modelSearchInput = $('model-search-input');
-const popoverModelsList = $('popover-models-list');
-const headerMemoryText = $('header-memory-text');
-const navShareBtn = $('nav-share-btn');
-const navKeyBtn = $('nav-key-btn');
-const navKeyText = $('nav-key-text');
+const dropdownModelsList = $('dropdown-models-list');
+const memoryStatusBadge = $('memory-status-badge');
+const memoryIndicatorDot = $('memory-indicator-dot');
+const memoryStatusText = $('memory-status-text');
 
-// Sidebar Cards
-const sidebarModelName = $('sidebar-model-name');
-const sidebarModelMeta = $('sidebar-model-meta');
-const sidebarProvIcon = $('sidebar-prov-icon');
-const sidebarSwitchModelBtn = $('sidebar-switch-model-btn');
-const sidebarMemoryCount = $('sidebar-memory-count');
-const sidebarMemoryDot = $('sidebar-memory-dot');
-const sidebarClearMemoryBtn = $('sidebar-clear-memory-btn');
-const dockModelToggleBtn = $('dock-model-toggle-btn');
-const dockModelLabel = $('dock-model-label');
-const dockProvIconSm = $('dock-prov-icon-sm');
+// Composer Controls
+const composerModelSwitchBtn = $('composer-model-switch-btn');
+const composerProvDot = $('composer-prov-dot');
+const composerModelName = $('composer-model-name');
+const composerContextLabel = $('composer-context-label');
 
 // Modals
-const configModal = $('config-modal');
-const modalCloseBtn = $('modal-close-btn');
-const modalCancelBtn = $('modal-cancel-btn');
-const modalSaveBtn = $('modal-save-btn');
-const openConfigBtn = $('open-config-btn');
+const keysModal = $('keys-modal');
+const openKeysBtn = $('open-keys-btn');
+const keysModalCloseBtn = $('keys-modal-close-btn');
+const keysModalCancelBtn = $('keys-modal-cancel-btn');
+const keysModalSaveBtn = $('keys-modal-save-btn');
+
 const shareModal = $('share-modal');
 const openShareBtn = $('open-share-btn');
 const shareModalCloseBtn = $('share-modal-close-btn');
 const shareModalDoneBtn = $('share-modal-done-btn');
+const newChatBtn = $('new-chat-btn');
 
-// Modal Elements
-const modalApiKeyInput = $('modal-api-key-input');
-const modalKeyToggleBtn = $('modal-key-toggle-btn');
-const modalKeyProviderName = $('modal-key-provider-name');
-const modalKeySavedBadge = $('modal-key-saved-badge');
-const modalModelsGrid = $('modal-models-grid');
-const modalCustomModelBox = $('modal-custom-model-box');
-const modalCustomModelInput = $('modal-custom-model-input');
-const modalSubPlatformBox = $('modal-sub-platform-box');
-const modalSubPills = $('modal-sub-pills');
-const modalCustomUrlGroup = $('modal-custom-url-group');
-const modalCustomUrlInput = $('modal-custom-url-input');
-const providerPortalLink = $('provider-portal-link');
+// Key Form Elements
+const modalKeyInput = $('modal-key-input');
+const toggleKeyMaskBtn = $('toggle-key-mask-btn');
+const modalKeyProviderTitle = $('modal-key-provider-title');
+const keyConfiguredBadge = $('key-configured-badge');
+const portalExternalLink = $('portal-external-link');
+const modalModelsList = $('modal-models-list');
+const customModelBox = $('custom-model-box');
+const customModelInput = $('custom-model-input');
+const subPlatformBox = $('sub-platform-box');
+const subPillsRow = $('sub-pills-row');
+const customUrlBox = $('custom-url-box');
+const customUrlInput = $('custom-url-input');
 
-// Modal selection state
+// Modal Selection Temp State
 let modalSelectedProvider = 'claude';
 let modalSelectedModel = 'claude-3-5-sonnet-20241022';
 let modalSelectedBaseUrl = null;
@@ -107,50 +95,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         const data = await res.json();
         appConfig = data.providers;
     } catch (err) {
-        console.error('Failed to load server config:', err);
+        console.error('Failed to load configuration:', err);
     }
 
-    initSidebarState();
-    buildPopoverModelsList();
-    syncProviderState(activeProviderId, activeModelId);
-    renderChatMemory();
-    updateMemoryBadges();
-    updateKeyBadges();
+    syncState(activeProviderId, activeModelId);
+    renderConversation();
+    updateMemoryUI();
     fetchShareInfo();
     bindEvents();
 });
 
-// ── SIDEBAR & SHORTCUTS ─────────────────────────────────
-
-function initSidebarState() {
-    const isCollapsed = localStorage.getItem('namma_sidebar_collapsed') === 'true';
-    if (isCollapsed) {
-        sidebar.classList.add('collapsed');
-    }
-}
-
-function toggleSidebar() {
-    sidebar.classList.toggle('collapsed');
-    localStorage.setItem('namma_sidebar_collapsed', sidebar.classList.contains('collapsed'));
-}
-
-// ── SHARE INFO ──────────────────────────────────────────
+// ── SHARE INFORMATION ───────────────────────────────────
 
 async function fetchShareInfo() {
     try {
         const res = await fetch('/api/share-info');
         const info = await res.json();
-        if (info.public_url && $('public-share-input')) $('public-share-input').value = info.public_url;
+        if ($('public-share-input')) $('public-share-input').value = 'https://nammaapi.vercel.app';
         if (info.lan_url && $('lan-share-input')) $('lan-share-input').value = info.lan_url;
         if (info.localhost_url && $('local-share-input')) $('local-share-input').value = info.localhost_url;
     } catch (e) {
-        console.warn('Share info unavailable:', e);
+        console.warn('Share info fallback active');
     }
 }
 
-// ── PROVIDER & MODEL SYNCHRONIZATION ────────────────────
+// ── STATE & MODEL SYNCHRONIZATION ───────────────────────
 
-function syncProviderState(providerId, modelId) {
+function syncState(providerId, modelId) {
     activeProviderId = providerId;
     localStorage.setItem('namma_active_provider', providerId);
 
@@ -159,27 +130,21 @@ function syncProviderState(providerId, modelId) {
         localStorage.setItem('namma_active_model', modelId);
     }
 
-    const provSvg = PROVIDER_SVGS[providerId] || PROVIDER_SVGS.other;
-    const provName = PROVIDER_LABELS[providerId] || "AI Model";
+    const dotColor = PROVIDER_COLORS[providerId] || '#fff';
+    const displayName = getModelName(activeModelId);
 
-    // Update Header Pill
-    headerModelLabel.textContent = getModelDisplayName(activeModelId);
-    headerProvIcon.innerHTML = provSvg;
+    // Update Topbar
+    activeModelText.textContent = displayName;
+    activeProvDot.style.backgroundColor = dotColor;
 
-    // Update Sidebar Active Card
-    sidebarModelName.textContent = getModelDisplayName(activeModelId);
-    sidebarModelMeta.textContent = `${provName} · Active`;
-    sidebarProvIcon.innerHTML = provSvg;
+    // Update Composer Tag
+    composerModelName.textContent = displayName;
+    composerProvDot.style.backgroundColor = dotColor;
 
-    // Update Dock Pill
-    dockModelLabel.textContent = getModelDisplayName(activeModelId);
-    dockProvIconSm.innerHTML = provSvg;
-
-    updateKeyBadges();
-    buildPopoverModelsList();
+    buildDropdownList();
 }
 
-function getModelDisplayName(modelId) {
+function getModelName(modelId) {
     if (!appConfig) return modelId;
     for (const key of Object.keys(appConfig)) {
         const p = appConfig[key];
@@ -188,9 +153,9 @@ function getModelDisplayName(modelId) {
             if (found) return found.name;
         }
         if (p.sub_providers) {
-            for (const subKey of Object.keys(p.sub_providers)) {
-                const sp = p.sub_providers[subKey];
-                const found = (sp.models || []).find(m => m.id === modelId);
+            for (const sKey of Object.keys(p.sub_providers)) {
+                const sub = p.sub_providers[sKey];
+                const found = (sub.models || []).find(m => m.id === modelId);
                 if (found) return found.name;
             }
         }
@@ -198,17 +163,17 @@ function getModelDisplayName(modelId) {
     return modelId;
 }
 
-// ── CUSTOM MODEL SELECTION POPOVER ──────────────────────
+// ── MODEL PICKER DROPDOWN ───────────────────────────────
 
-function buildPopoverModelsList(filterQuery = '') {
-    if (!appConfig || !popoverModelsList) return;
-    popoverModelsList.innerHTML = '';
+function buildDropdownList(filter = '') {
+    if (!appConfig || !dropdownModelsList) return;
+    dropdownModelsList.innerHTML = '';
+    const q = filter.toLowerCase().trim();
 
-    const query = filterQuery.toLowerCase().trim();
-    const keyMap = { "claude": "3", "gemini": "2", "openai": "1", "other": "4" };
+    const providerMap = { claude: '3', gemini: '2', openai: '1', other: '4' };
 
-    Object.keys(keyMap).forEach(provId => {
-        const pData = appConfig[keyMap[provId]];
+    Object.keys(providerMap).forEach(provId => {
+        const pData = appConfig[providerMap[provId]];
         if (!pData) return;
 
         let models = [];
@@ -221,104 +186,82 @@ function buildPopoverModelsList(filterQuery = '') {
             models = pData.models || [];
         }
 
-        const filtered = models.filter(m => 
-            !query || m.name.toLowerCase().includes(query) || m.id.toLowerCase().includes(query) || (m.desc && m.desc.toLowerCase().includes(query))
+        const filtered = models.filter(m =>
+            !q || m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q) || (m.desc && m.desc.toLowerCase().includes(q))
         );
 
         if (filtered.length === 0) return;
 
-        // Group Header
         const header = document.createElement('div');
-        header.className = 'popover-group-header';
+        header.className = 'dropdown-section-tag';
         header.textContent = pData.name;
-        popoverModelsList.appendChild(header);
+        dropdownModelsList.appendChild(header);
 
-        // Model Rows
         filtered.forEach(m => {
-            const item = document.createElement('div');
-            const isActive = m.id === activeModelId;
-            item.className = `popover-model-item ${isActive ? 'active' : ''}`;
-            item.innerHTML = `
-                <div class="popover-item-left">
-                    <span class="popover-item-name">
-                        <span>${escapeHtml(m.name)}</span>
-                        ${m.desc && m.desc.includes('Flagship') ? '<span class="popover-badge">Flagship</span>' : ''}
-                        ${m.desc && m.desc.includes('Fast') ? '<span class="popover-badge">Fast</span>' : ''}
-                        ${m.desc && m.desc.includes('Reasoning') ? '<span class="popover-badge">Reasoning</span>' : ''}
-                    </span>
-                    <span class="popover-item-desc">${escapeHtml(m.desc || m.id)}</span>
+            const row = document.createElement('div');
+            const isSelected = m.id === activeModelId;
+            row.className = `dropdown-row ${isSelected ? 'selected' : ''}`;
+            row.innerHTML = `
+                <div class="dropdown-row-main">
+                    <span class="dropdown-row-name">${escapeHtml(m.name)}</span>
+                    <span class="dropdown-row-desc">${escapeHtml(m.desc || m.id)}</span>
                 </div>
-                <span class="popover-item-check">✓</span>
+                <span class="dropdown-row-check">✓</span>
             `;
 
-            item.addEventListener('click', () => {
-                syncProviderState(provId, m.id);
+            row.addEventListener('click', () => {
+                syncState(provId, m.id);
                 if (m.subUrl) {
                     activeBaseUrl = m.subUrl;
                     localStorage.setItem('namma_active_base_url', activeBaseUrl);
                 }
-                closeModelPopover();
+                closeDropdown();
             });
 
-            popoverModelsList.appendChild(item);
+            dropdownModelsList.appendChild(row);
         });
     });
 }
 
-function openModelPopover() {
-    modelMenuPopover.classList.remove('hidden');
+function openDropdown() {
+    modelDropdown.classList.remove('hidden');
     modelSearchInput.value = '';
     modelSearchInput.focus();
-    buildPopoverModelsList();
+    buildDropdownList();
 }
 
-function closeModelPopover() {
-    modelMenuPopover.classList.add('hidden');
+function closeDropdown() {
+    modelDropdown.classList.add('hidden');
 }
 
-// ── KEY STATUS & MEMORY COUNTERS ────────────────────────
+// ── MEMORY STATUS ───────────────────────────────────────
 
-function updateKeyBadges() {
-    const key = savedKeys[activeProviderId];
-    const isConfigured = !!(key && key.trim());
-
-    if (navKeyText) {
-        navKeyText.textContent = isConfigured ? "Keys ✓" : "Setup Keys";
-    }
-
-    // Sidebar indicators
-    const provs = ['claude', 'gemini', 'openai', 'other'];
-    provs.forEach(p => {
-        const pKey = savedKeys[p];
-        const dot = $(`dot-${p}`);
-        const link = $(`link-key-${p}`);
-        const hasKey = !!(pKey && pKey.trim());
-        if (dot) dot.classList.toggle('ready', hasKey);
-        if (link) link.textContent = hasKey ? "Ready ✓" : "Setup";
-    });
-}
-
-function updateMemoryBadges() {
+function updateMemoryUI() {
     const count = chatMemory.length;
-    const text = `Shared Memory: ${count} msg${count === 1 ? '' : 's'}`;
-    if (headerMemoryText) headerMemoryText.textContent = text;
-    if (sidebarMemoryCount) sidebarMemoryCount.textContent = `${count} turn${count === 1 ? '' : 's'}`;
-    if (sidebarMemoryDot) sidebarMemoryDot.classList.toggle('idle', count === 0);
+    if (memoryStatusText) {
+        memoryStatusText.textContent = count > 0 ? `${count} turn${count === 1 ? '' : 's'} shared` : 'Shared context';
+    }
+    if (memoryIndicatorDot) {
+        memoryIndicatorDot.classList.toggle('idle', count === 0);
+    }
+    if (composerContextLabel) {
+        composerContextLabel.textContent = count > 0 ? `${count} turns in memory` : 'Context active';
+    }
 }
 
-// ── CHAT & MESSAGES ─────────────────────────────────────
+// ── CONVERSATION STREAM ─────────────────────────────────
 
-function renderChatMemory() {
+function renderConversation() {
     if (!chatMemory || chatMemory.length === 0) {
-        heroEmptyState.classList.remove('hidden');
-        messagesContainer.innerHTML = '';
+        quietHero.classList.remove('hidden');
+        conversationStream.innerHTML = '';
         return;
     }
 
-    heroEmptyState.classList.add('hidden');
-    messagesContainer.innerHTML = '';
+    quietHero.classList.add('hidden');
+    conversationStream.innerHTML = '';
     chatMemory.forEach(msg => {
-        appendMessageTurn(msg.role, msg.content, msg.model, msg.provider);
+        appendMessage(msg.role, msg.content, msg.model, msg.provider);
     });
 }
 
@@ -327,34 +270,32 @@ async function sendMessage(text) {
 
     if (!key || !key.trim()) {
         pendingMessage = text;
-        openConfigModal(activeProviderId);
+        openKeysModal(activeProviderId);
         return;
     }
 
-    heroEmptyState.classList.add('hidden');
+    quietHero.classList.add('hidden');
     userInput.value = '';
     userInput.style.height = 'auto';
-    charCounter.textContent = '0 chars';
     submitBtn.disabled = true;
 
-    // 1. Append User Message
-    const userMsg = {
+    // 1. Add User Turn
+    const userTurn = {
         role: 'user',
         content: text,
         model: null,
         provider: null,
         timestamp: Date.now()
     };
-    appendMessageTurn('user', text);
-    chatMemory.push(userMsg);
+    appendMessage('user', text);
+    chatMemory.push(userTurn);
     localStorage.setItem('namma_chat_memory', JSON.stringify(chatMemory));
-    updateMemoryBadges();
+    updateMemoryUI();
 
-    // 2. Append Thinking Indicator
-    const thinkingTurn = appendThinkingIndicator();
-    const startTime = Date.now();
+    // 2. Add Thinking Turn
+    const thinkingRow = appendThinking();
 
-    // 3. Prepare full cross-model chat payload
+    // 3. Prepare Multi-turn API history
     const apiMessages = chatMemory.map(m => ({
         role: m.role,
         content: m.content
@@ -376,276 +317,263 @@ async function sendMessage(text) {
         });
 
         const data = await res.json();
-        thinkingTurn.remove();
-        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        thinkingRow.remove();
 
         if (res.ok && data.success) {
-            const aiMsg = {
+            const assistantTurn = {
                 role: 'assistant',
                 content: data.reply,
                 model: activeModelId,
                 provider: activeProviderId,
                 timestamp: Date.now()
             };
-            appendMessageTurn('assistant', data.reply, activeModelId, activeProviderId, `${elapsed}s`);
-            chatMemory.push(aiMsg);
+            appendMessage('assistant', data.reply, activeModelId, activeProviderId);
+            chatMemory.push(assistantTurn);
             localStorage.setItem('namma_chat_memory', JSON.stringify(chatMemory));
-            updateMemoryBadges();
+            updateMemoryUI();
         } else {
-            const errorText = data.error || 'The model provider failed to return a response.';
-            appendErrorTurn(errorText);
-            chatMemory.pop(); // Remove rejected user turn
+            const err = data.error || 'The provider returned an error.';
+            appendError(err);
+            chatMemory.pop();
             localStorage.setItem('namma_chat_memory', JSON.stringify(chatMemory));
-            updateMemoryBadges();
+            updateMemoryUI();
         }
     } catch (err) {
-        thinkingTurn.remove();
-        appendErrorTurn(`Network error: ${err.message}`);
+        thinkingRow.remove();
+        appendError(`Network connection error: ${err.message}`);
         chatMemory.pop();
         localStorage.setItem('namma_chat_memory', JSON.stringify(chatMemory));
-        updateMemoryBadges();
+        updateMemoryUI();
     } finally {
         submitBtn.disabled = !userInput.value.trim();
         userInput.focus();
     }
 }
 
-function appendMessageTurn(role, content, modelId = null, providerId = null, latency = null) {
-    const turn = document.createElement('div');
-    turn.className = `msg-turn ${role}`;
+function appendMessage(role, content, modelId = null, providerId = null) {
+    const row = document.createElement('div');
+    row.className = `message-row ${role}`;
 
     if (role === 'user') {
-        turn.innerHTML = `
-            <div class="user-message-card">${escapeHtml(content)}</div>
-        `;
+        row.innerHTML = `<div class="user-bubble-box">${escapeHtml(content)}</div>`;
     } else {
         const parsed = marked.parse(content);
-        const provLabel = PROVIDER_LABELS[providerId] || 'AI Model';
+        const provLabel = PROVIDER_NAMES[providerId] || 'AI Model';
         const modelLabel = modelId ? `${provLabel} · ${modelId}` : 'nammaAPI';
-        const latencyHtml = latency ? `<span class="ai-latency">⚡ ${latency}</span>` : '';
 
-        turn.innerHTML = `
-            <div class="ai-message-card">
-                <div class="ai-card-header">
-                    <div class="ai-header-left">
-                        <span class="ai-provider-badge">${escapeHtml(provLabel)}</span>
-                        <span class="ai-model-tag">· ${escapeHtml(modelId || '')}</span>
-                    </div>
-                    <div class="ai-header-actions">
-                        ${latencyHtml}
-                        <button type="button" class="btn-subtle btn-copy-turn" title="Copy response">Copy</button>
+        row.innerHTML = `
+            <div class="ai-entry">
+                <div class="ai-meta-bar">
+                    <span class="ai-meta-author">${escapeHtml(modelLabel)}</span>
+                    <div class="ai-meta-actions">
+                        <button type="button" class="btn-mini-copy" title="Copy text">Copy</button>
                     </div>
                 </div>
-                <div class="ai-card-body">${parsed}</div>
+                <div class="ai-text-body">${parsed}</div>
             </div>
         `;
 
-        // Copy button action
-        const copyBtn = turn.querySelector('.btn-copy-turn');
+        const copyBtn = row.querySelector('.btn-mini-copy');
         if (copyBtn) {
             copyBtn.addEventListener('click', () => {
                 navigator.clipboard.writeText(content).then(() => {
-                    copyBtn.textContent = 'Copied!';
-                    setTimeout(() => copyBtn.textContent = 'Copy', 1800);
+                    copyBtn.textContent = 'Copied';
+                    setTimeout(() => copyBtn.textContent = 'Copy', 1600);
                 });
             });
         }
 
-        // Code block syntax highlighting
-        turn.querySelectorAll('pre code').forEach(block => {
-            hljs.highlightElement(block);
-        });
+        row.querySelectorAll('pre code').forEach(b => hljs.highlightElement(b));
     }
 
-    messagesContainer.appendChild(turn);
-    chatFeed.scrollTop = chatFeed.scrollHeight;
-    return turn;
+    conversationStream.appendChild(row);
+    chatViewport.scrollTop = chatViewport.scrollHeight;
+    return row;
 }
 
-function appendThinkingIndicator() {
-    const turn = document.createElement('div');
-    turn.className = 'msg-turn assistant';
-    turn.innerHTML = `
-        <div class="ai-message-card">
-            <div class="thinking-card">
-                <div class="spinner"></div>
-                <span>${escapeHtml(getModelDisplayName(activeModelId))} is thinking with shared context...</span>
+function appendThinking() {
+    const row = document.createElement('div');
+    row.className = 'message-row assistant';
+    row.innerHTML = `
+        <div class="ai-entry">
+            <div class="ai-thinking-row">
+                <span class="pulse-dot"></span>
+                <span>Thinking with shared memory...</span>
             </div>
         </div>
     `;
-    messagesContainer.appendChild(turn);
-    chatFeed.scrollTop = chatFeed.scrollHeight;
-    return turn;
+    conversationStream.appendChild(row);
+    chatViewport.scrollTop = chatViewport.scrollHeight;
+    return row;
 }
 
-function appendErrorTurn(errorMsg) {
-    const turn = document.createElement('div');
-    turn.className = 'msg-turn assistant';
-    turn.innerHTML = `
-        <div class="ai-message-card error-card">
-            <span class="error-title">API Request Failed</span>
-            <p class="error-desc">${escapeHtml(errorMsg)}</p>
-            <button type="button" class="error-action-btn" onclick="openConfigModal('${activeProviderId}')">
-                Update ${activeProviderId.toUpperCase()} API Key
-            </button>
+function appendError(errorMsg) {
+    const row = document.createElement('div');
+    row.className = 'message-row assistant';
+    row.innerHTML = `
+        <div class="ai-entry">
+            <div class="ai-error-box">
+                <span class="ai-error-title">Request unsuccessful</span>
+                <span class="ai-error-desc">${escapeHtml(errorMsg)}</span>
+                <button type="button" class="ai-error-btn" onclick="openKeysModal('${activeProviderId}')">Update ${activeProviderId.toUpperCase()} API key</button>
+            </div>
         </div>
     `;
-    messagesContainer.appendChild(turn);
-    chatFeed.scrollTop = chatFeed.scrollHeight;
+    conversationStream.appendChild(row);
+    chatViewport.scrollTop = chatViewport.scrollHeight;
 }
 
-// ── CONFIG MODAL ────────────────────────────────────────
+// ── KEYS CONFIGURATION MODAL ────────────────────────────
 
-function openConfigModal(providerId) {
-    setupModalForProvider(providerId || activeProviderId);
-    configModal.classList.add('active');
+function openKeysModal(providerId) {
+    setupKeysModalFor(providerId || activeProviderId);
+    keysModal.classList.add('active');
 }
 
-function closeConfigModal() {
-    configModal.classList.remove('active');
+function closeKeysModal() {
+    keysModal.classList.remove('active');
 }
 
-function setupModalForProvider(pid) {
+function setupKeysModalFor(pid) {
     modalSelectedProvider = pid;
 
-    // Tabs
-    $$('.prov-tab').forEach(tab => {
-        tab.classList.toggle('active', tab.dataset.providerId === pid);
+    $$('.prov-choice-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.providerId === pid);
     });
 
     if (!appConfig) return;
 
-    const keyMap = { "claude": "3", "gemini": "2", "openai": "1", "other": "4" };
-    const pData = appConfig[keyMap[pid]];
+    const providerMap = { claude: '3', gemini: '2', openai: '1', other: '4' };
+    const pData = appConfig[providerMap[pid]];
 
-    modalKeyProviderName.textContent = pData.name;
+    modalKeyProviderTitle.textContent = pData.name;
 
     const portals = {
-        claude: "https://console.anthropic.com/",
-        openai: "https://platform.openai.com/api-keys",
-        gemini: "https://aistudio.google.com/app/apikey",
-        other: "https://platform.deepseek.com/"
+        claude: 'https://console.anthropic.com/',
+        openai: 'https://platform.openai.com/api-keys',
+        gemini: 'https://aistudio.google.com/app/apikey',
+        other: 'https://platform.deepseek.com/'
     };
-    if (providerPortalLink) {
-        providerPortalLink.href = portals[pid] || "https://platform.deepseek.com/";
-        providerPortalLink.textContent = `${pData.name} Console ↗`;
+    if (portalExternalLink) {
+        portalExternalLink.href = portals[pid] || 'https://platform.deepseek.com/';
+        portalExternalLink.textContent = `Get key from ${pData.name} console ↗`;
     }
 
     const existingKey = savedKeys[pid] || '';
-    modalApiKeyInput.value = existingKey;
-    modalKeySavedBadge.classList.toggle('hidden', !existingKey);
+    modalKeyInput.value = existingKey;
+    keyConfiguredBadge.classList.toggle('hidden', !existingKey);
 
     const placeholders = {
-        claude: "sk-ant-api03-...",
-        openai: "sk-proj-...",
-        gemini: "AIzaSy...",
-        other: "sk-..."
+        claude: 'sk-ant-api03-...',
+        openai: 'sk-proj-...',
+        gemini: 'AIzaSy...',
+        other: 'sk-...'
     };
-    modalApiKeyInput.placeholder = placeholders[pid] || "Enter API key...";
+    modalKeyInput.placeholder = placeholders[pid] || 'Enter API key...';
 
     if (pid === 'other') {
-        modalSubPlatformBox.classList.remove('hidden');
-        renderModalSubPlatforms(pData.sub_providers);
+        subPlatformBox.classList.remove('hidden');
+        renderSubPlatforms(pData.sub_providers);
     } else {
-        modalSubPlatformBox.classList.add('hidden');
-        renderModalModels(pData.models || []);
+        subPlatformBox.classList.add('hidden');
+        renderSheetModels(pData.models || []);
     }
 }
 
-function renderModalSubPlatforms(subProviders) {
-    modalSubPills.innerHTML = '';
+function renderSubPlatforms(subProviders) {
+    subPillsRow.innerHTML = '';
     const keys = Object.keys(subProviders || {});
 
     keys.forEach((k, idx) => {
         const sp = subProviders[k];
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = `sub-plat-pill ${idx === 0 ? 'active' : ''}`;
+        btn.className = `sub-plat-tag ${idx === 0 ? 'active' : ''}`;
         btn.textContent = sp.name;
 
         btn.addEventListener('click', () => {
-            $$('#modal-sub-pills .sub-plat-pill').forEach(b => b.classList.remove('active'));
+            $$('#sub-pills-row .sub-plat-tag').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             modalSelectedBaseUrl = sp.base_url;
 
             if (sp.base_url === 'custom') {
-                modalCustomUrlGroup.classList.remove('hidden');
-                modalSelectedBaseUrl = modalCustomUrlInput.value.trim() || 'http://localhost:11434/v1/chat/completions';
+                customUrlBox.classList.remove('hidden');
+                modalSelectedBaseUrl = customUrlInput.value.trim() || 'http://localhost:11434/v1/chat/completions';
             } else {
-                modalCustomUrlGroup.classList.add('hidden');
+                customUrlBox.classList.add('hidden');
             }
 
-            renderModalModels(sp.models || []);
+            renderSheetModels(sp.models || []);
         });
 
-        modalSubPills.appendChild(btn);
+        subPillsRow.appendChild(btn);
     });
 
     if (keys.length > 0) {
         modalSelectedBaseUrl = subProviders[keys[0]].base_url;
-        renderModalModels(subProviders[keys[0]].models || []);
+        renderSheetModels(subProviders[keys[0]].models || []);
     }
 }
 
-function renderModalModels(models) {
-    modalModelsGrid.innerHTML = '';
-    modalCustomModelBox.classList.add('hidden');
+function renderSheetModels(models) {
+    modalModelsList.innerHTML = '';
+    customModelBox.classList.add('hidden');
 
     models.forEach((m, idx) => {
         const tile = document.createElement('div');
         const isCurrent = m.id === activeModelId || idx === 0;
-        tile.className = `modal-model-tile ${isCurrent ? 'selected' : ''}`;
+        tile.className = `sheet-model-tile ${isCurrent ? 'active' : ''}`;
         tile.innerHTML = `
-            <div class="tile-meta">
-                <span class="tile-title">${escapeHtml(m.name)}</span>
-                <span class="tile-sub">${escapeHtml(m.desc || m.id)}</span>
+            <div class="sheet-model-main">
+                <span class="sheet-model-name">${escapeHtml(m.name)}</span>
+                <span class="sheet-model-desc">${escapeHtml(m.desc || m.id)}</span>
             </div>
-            <span class="tile-check">✓</span>
+            <span class="sheet-model-check">✓</span>
         `;
 
         if (isCurrent) modalSelectedModel = m.id;
 
         tile.addEventListener('click', () => {
-            $$('.modal-model-tile').forEach(t => t.classList.remove('selected'));
-            tile.classList.add('selected');
+            $$('.sheet-model-tile').forEach(t => t.classList.remove('active'));
+            tile.classList.add('active');
             modalSelectedModel = m.id;
-            modalCustomModelBox.classList.add('hidden');
+            customModelBox.classList.add('hidden');
         });
 
-        modalModelsGrid.appendChild(tile);
+        modalModelsList.appendChild(tile);
     });
 
-    // Custom Model Option
+    // Custom model tile
     const customTile = document.createElement('div');
-    customTile.className = 'modal-model-tile full-width';
+    customTile.className = 'sheet-model-tile full';
     customTile.innerHTML = `
-        <div class="tile-meta">
-            <span class="tile-title">Custom Model Identifier</span>
-            <span class="tile-sub">Input any specific model tag manually</span>
+        <div class="sheet-model-main">
+            <span class="sheet-model-name">Custom Model</span>
+            <span class="sheet-model-desc">Enter any model identifier</span>
         </div>
-        <span class="tile-check">✓</span>
+        <span class="sheet-model-check">✓</span>
     `;
 
     customTile.addEventListener('click', () => {
-        $$('.modal-model-tile').forEach(t => t.classList.remove('selected'));
-        customTile.classList.add('selected');
-        modalCustomModelBox.classList.remove('hidden');
-        modalSelectedModel = modalCustomModelInput.value.trim() || 'custom';
+        $$('.sheet-model-tile').forEach(t => t.classList.remove('active'));
+        customTile.classList.add('active');
+        customModelBox.classList.remove('hidden');
+        modalSelectedModel = customModelInput.value.trim() || 'custom';
     });
 
-    modalModelsGrid.appendChild(customTile);
+    modalModelsList.appendChild(customTile);
 }
 
-function saveModalSettings() {
-    const key = modalApiKeyInput.value.trim();
+function saveKeySettings() {
+    const key = modalKeyInput.value.trim();
     if (key) {
         savedKeys[modalSelectedProvider] = key;
         localStorage.setItem('namma_api_keys', JSON.stringify(savedKeys));
     }
 
-    if (modalCustomModelBox && !modalCustomModelBox.classList.contains('hidden')) {
-        const customVal = modalCustomModelInput.value.trim();
-        if (customVal) modalSelectedModel = customVal;
+    if (customModelBox && !customModelBox.classList.contains('hidden')) {
+        const val = customModelInput.value.trim();
+        if (val) modalSelectedModel = val;
     }
 
     activeModelId = modalSelectedModel;
@@ -656,94 +584,53 @@ function saveModalSettings() {
         localStorage.setItem('namma_active_base_url', activeBaseUrl);
     }
 
-    syncProviderState(modalSelectedProvider, activeModelId);
+    syncState(modalSelectedProvider, activeModelId);
 }
 
 // ── BIND EVENT LISTENERS ────────────────────────────────
 
 function bindEvents() {
-    // Sidebar Toggles
-    if (sidebarCloseBtn) sidebarCloseBtn.addEventListener('click', toggleSidebar);
-    if (sidebarOpenBtn) sidebarOpenBtn.addEventListener('click', toggleSidebar);
-
-    // New Conversation
-    newChatBtn.addEventListener('click', resetConversation);
-
-    // Global Shortcut: ⌘K or Ctrl+K for New Conversation
-    document.addEventListener('keydown', (e) => {
-        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-            e.preventDefault();
-            resetConversation();
-        }
-    });
-
-    // Model Dropdown Popover
-    headerModelDropdownBtn.addEventListener('click', (e) => {
+    // Topbar Dropdown
+    modelPopoverTrigger.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (modelMenuPopover.classList.contains('hidden')) {
-            openModelPopover();
+        if (modelDropdown.classList.contains('hidden')) {
+            openDropdown();
         } else {
-            closeModelPopover();
+            closeDropdown();
         }
     });
 
-    if (sidebarSwitchModelBtn) {
-        sidebarSwitchModelBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            openConfigModal(activeProviderId);
-        });
-    }
+    composerModelSwitchBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openDropdown();
+    });
 
-    if (dockModelToggleBtn) {
-        dockModelToggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            openModelPopover();
-        });
-    }
-
-    // Search filter inside model popover
     modelSearchInput.addEventListener('input', (e) => {
-        buildPopoverModelsList(e.target.value);
+        buildDropdownList(e.target.value);
     });
 
-    // Close popover on outside click
     document.addEventListener('click', (e) => {
-        if (!modelMenuPopover.contains(e.target) && !headerModelDropdownBtn.contains(e.target) && !dockModelToggleBtn.contains(e.target)) {
-            closeModelPopover();
+        if (!modelDropdown.contains(e.target) && !modelPopoverTrigger.contains(e.target) && !composerModelSwitchBtn.contains(e.target)) {
+            closeDropdown();
         }
     });
 
-    // Clear Memory
-    sidebarClearMemoryBtn.addEventListener('click', () => {
-        if (chatMemory.length === 0) return;
-        if (confirm('Clear shared memory for this conversation?')) {
-            chatMemory = [];
-            localStorage.removeItem('namma_chat_memory');
-            messagesContainer.innerHTML = '';
-            heroEmptyState.classList.remove('hidden');
-            updateMemoryBadges();
-        }
-    });
-
-    // Capability Prompt Cards
-    $$('.prompt-card').forEach(card => {
-        card.addEventListener('click', () => {
-            const prompt = card.dataset.prompt;
+    // Starter Suggestions
+    $$('.suggestion-tile').forEach(tile => {
+        tile.addEventListener('click', () => {
+            const prompt = tile.dataset.prompt;
             userInput.value = prompt;
             userInput.style.height = 'auto';
-            charCounter.textContent = `${prompt.length} chars`;
             submitBtn.disabled = false;
             userInput.focus();
             chatForm.dispatchEvent(new Event('submit'));
         });
     });
 
-    // Textarea input sizing & counter
+    // Input auto-grow and submit
     userInput.addEventListener('input', () => {
         userInput.style.height = 'auto';
         userInput.style.height = `${Math.min(userInput.scrollHeight, 160)}px`;
-        const len = userInput.value.length;
-        charCounter.textContent = `${len} char${len === 1 ? '' : 's'}`;
         submitBtn.disabled = !userInput.value.trim();
     });
 
@@ -762,47 +649,45 @@ function bindEvents() {
         if (text) sendMessage(text);
     });
 
-    // Config Modal
-    openConfigBtn.addEventListener('click', () => openConfigModal(activeProviderId));
-    navKeyBtn.addEventListener('click', () => openConfigModal(activeProviderId));
-    modalCloseBtn.addEventListener('click', closeConfigModal);
-    modalCancelBtn.addEventListener('click', closeConfigModal);
-    configModal.addEventListener('click', (e) => {
-        if (e.target === configModal) closeConfigModal();
+    // Reset / New Chat
+    newChatBtn.addEventListener('click', resetChat);
+
+    document.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+            e.preventDefault();
+            resetChat();
+        }
     });
 
-    modalSaveBtn.addEventListener('click', () => {
-        saveModalSettings();
-        closeConfigModal();
+    // Keys Modal
+    openKeysBtn.addEventListener('click', () => openKeysModal(activeProviderId));
+    keysModalCloseBtn.addEventListener('click', closeKeysModal);
+    keysModalCancelBtn.addEventListener('click', closeKeysModal);
+    keysModal.addEventListener('click', (e) => {
+        if (e.target === keysModal) closeKeysModal();
+    });
+
+    keysModalSaveBtn.addEventListener('click', () => {
+        saveKeySettings();
+        closeKeysModal();
         if (pendingMessage) {
             sendMessage(pendingMessage);
             pendingMessage = null;
         }
     });
 
-    $$('.prov-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            setupModalForProvider(tab.dataset.providerId);
+    $$('.prov-choice-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            setupKeysModalFor(btn.dataset.providerId);
         });
     });
 
-    $$('.prov-config-link').forEach(link => {
-        link.addEventListener('click', () => {
-            openConfigModal(link.dataset.openProvider);
-        });
-    });
-
-    modalKeyToggleBtn.addEventListener('click', () => {
-        const isPass = modalApiKeyInput.type === 'password';
-        modalApiKeyInput.type = isPass ? 'text' : 'password';
+    toggleKeyMaskBtn.addEventListener('click', () => {
+        modalKeyInput.type = modalKeyInput.type === 'password' ? 'text' : 'password';
     });
 
     // Share Modal
     openShareBtn.addEventListener('click', () => {
-        fetchShareInfo();
-        shareModal.classList.add('active');
-    });
-    navShareBtn.addEventListener('click', () => {
         fetchShareInfo();
         shareModal.classList.add('active');
     });
@@ -812,19 +697,18 @@ function bindEvents() {
         if (e.target === shareModal) shareModal.classList.remove('active');
     });
 
-    // Copy Buttons in Share Modal
-    $$('.btn-copy').forEach(btn => {
+    $$('.btn-copy-link').forEach(btn => {
         btn.addEventListener('click', () => {
             const input = $(btn.dataset.inputId);
             if (input) {
                 navigator.clipboard.writeText(input.value).then(() => {
                     const orig = btn.textContent;
-                    btn.textContent = 'Copied!';
+                    btn.textContent = 'Copied';
                     btn.classList.add('copied');
                     setTimeout(() => {
                         btn.textContent = orig;
                         btn.classList.remove('copied');
-                    }, 1800);
+                    }, 1600);
                 });
             }
         });
@@ -833,22 +717,22 @@ function bindEvents() {
     // Escape closes modals
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            closeConfigModal();
+            closeKeysModal();
             shareModal.classList.remove('active');
-            closeModelPopover();
+            closeDropdown();
         }
     });
 }
 
-function resetConversation() {
-    if (chatMemory.length > 0 && !confirm('Start a new conversation? Memory for this thread will be reset.')) {
+function resetChat() {
+    if (chatMemory.length > 0 && !confirm('Start a new conversation? Shared memory will be cleared.')) {
         return;
     }
     chatMemory = [];
     localStorage.removeItem('namma_chat_memory');
-    messagesContainer.innerHTML = '';
-    heroEmptyState.classList.remove('hidden');
-    updateMemoryBadges();
+    conversationStream.innerHTML = '';
+    quietHero.classList.remove('hidden');
+    updateMemoryUI();
     userInput.focus();
 }
 

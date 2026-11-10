@@ -3,471 +3,252 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>nammaAPI — Unified Multi-Model AI Studio</title>
+    <title>nammaAPI</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="app-container">
-        <!-- SIDEBAR -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <div class="brand">
-                    <div class="brand-logo">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-                            <path d="M2 17l10 5 10-5"></path>
-                            <path d="M2 12l10 5 10-5"></path>
-                        </svg>
-                    </div>
-                    <div class="brand-info">
-                        <span class="brand-title">nammaAPI</span>
-                        <span class="brand-badge">Studio</span>
-                    </div>
-                </div>
-                <button type="button" class="icon-btn sidebar-toggle-btn" id="sidebar-close-btn" title="Close sidebar">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <line x1="9" y1="3" x2="9" y2="21"></line>
-                    </svg>
-                </button>
-            </div>
+    <div class="workspace">
+        <!-- TOP NAVIGATION -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <a href="/" class="brand-mark" title="nammaAPI">
+                    <span class="brand-monogram">n</span>
+                    <span class="brand-text">nammaAPI</span>
+                </a>
 
-            <!-- ACTION: NEW CHAT -->
-            <div class="sidebar-action-wrap">
-                <button type="button" class="btn-new-chat" id="new-chat-btn">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                    <span>New conversation</span>
-                    <kbd class="kbd-shortcut">⌘K</kbd>
-                </button>
-            </div>
-
-            <div class="sidebar-scrollable">
-                <!-- ACTIVE MODEL CARD -->
-                <div class="sidebar-section">
-                    <span class="sidebar-section-title">Active Model</span>
-                    <div class="active-model-card" id="sidebar-model-card">
-                        <div class="model-card-top">
-                            <div class="model-provider-icon" id="sidebar-prov-icon">
-                                <!-- Dynamic Provider SVG -->
-                            </div>
-                            <div class="model-card-labels">
-                                <span class="model-card-name" id="sidebar-model-name">Claude 3.5 Sonnet</span>
-                                <span class="model-card-meta" id="sidebar-model-meta">Anthropic · 200k context</span>
-                            </div>
-                        </div>
-                        <button type="button" class="model-card-switch-btn" id="sidebar-switch-model-btn">
-                            <span>Switch model</span>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                                <path d="M9 18l6-6-6-6"/>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- SHARED MEMORY STATUS -->
-                <div class="sidebar-section">
-                    <span class="sidebar-section-title">Context & Memory</span>
-                    <div class="memory-card">
-                        <div class="memory-status-row">
-                            <div class="memory-lead">
-                                <span class="status-pulse-dot" id="sidebar-memory-dot"></span>
-                                <span class="memory-label">Shared context</span>
-                            </div>
-                            <span class="memory-pill-badge" id="sidebar-memory-count">0 turns</span>
-                        </div>
-                        <p class="memory-card-desc">Conversation history is shared automatically when switching between Claude, Gemini, OpenAI & DeepSeek.</p>
-                        <div class="memory-actions">
-                            <button type="button" class="memory-clear-btn" id="sidebar-clear-memory-btn">Clear memory</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- PROVIDER KEYS HEALTH -->
-                <div class="sidebar-section">
-                    <span class="sidebar-section-title">Connected Providers</span>
-                    <div class="providers-list">
-                        <div class="provider-status-row" data-provider="claude">
-                            <div class="prov-left">
-                                <span class="prov-dot" id="dot-claude"></span>
-                                <span class="prov-text">Anthropic Claude</span>
-                            </div>
-                            <button type="button" class="prov-config-link" data-open-provider="claude" id="link-key-claude">Setup</button>
-                        </div>
-                        <div class="provider-status-row" data-provider="gemini">
-                            <div class="prov-left">
-                                <span class="prov-dot" id="dot-gemini"></span>
-                                <span class="prov-text">Google Gemini</span>
-                            </div>
-                            <button type="button" class="prov-config-link" data-open-provider="gemini" id="link-key-gemini">Setup</button>
-                        </div>
-                        <div class="provider-status-row" data-provider="openai">
-                            <div class="prov-left">
-                                <span class="prov-dot" id="dot-openai"></span>
-                                <span class="prov-text">OpenAI</span>
-                            </div>
-                            <button type="button" class="prov-config-link" data-open-provider="openai" id="link-key-openai">Setup</button>
-                        </div>
-                        <div class="provider-status-row" data-provider="other">
-                            <div class="prov-left">
-                                <span class="prov-dot" id="dot-other"></span>
-                                <span class="prov-text">DeepSeek & Custom</span>
-                            </div>
-                            <button type="button" class="prov-config-link" data-open-provider="other" id="link-key-other">Setup</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SIDEBAR FOOTER -->
-            <div class="sidebar-footer">
-                <button type="button" class="sidebar-footer-btn" id="open-share-btn">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="18" cy="5" r="3"></circle>
-                        <circle cx="6" cy="12" r="3"></circle>
-                        <circle cx="18" cy="19" r="3"></circle>
-                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-                    </svg>
-                    <span>Share workspace</span>
-                </button>
-                <button type="button" class="sidebar-footer-btn" id="open-config-btn">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                    </svg>
-                    <span>API keys</span>
-                </button>
-            </div>
-        </aside>
-
-        <!-- MAIN VIEWPORT -->
-        <div class="main-viewport">
-            <!-- TOP APP BAR -->
-            <header class="app-header">
-                <div class="header-left">
-                    <button type="button" class="icon-btn header-toggle-btn" id="sidebar-open-btn" title="Toggle sidebar">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                            <line x1="9" y1="3" x2="9" y2="21"></line>
+                <div class="model-picker-wrap">
+                    <button type="button" class="model-selector-btn" id="model-popover-trigger">
+                        <span class="active-prov-dot" id="active-prov-dot"></span>
+                        <span class="active-model-text" id="active-model-text">Claude 3.5 Sonnet</span>
+                        <svg class="chevron-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M6 9l6 6 6-6"/>
                         </svg>
                     </button>
 
-                    <!-- QUICK MODEL PICKER PILL -->
-                    <div class="model-picker-anchor">
-                        <button type="button" class="header-model-pill" id="header-model-dropdown-btn">
-                            <span class="pill-prov-icon" id="header-prov-icon"></span>
-                            <span class="pill-model-name" id="header-model-label">Claude 3.5 Sonnet</span>
-                            <svg class="pill-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                                <path d="M6 9l6 6 6-6"/>
+                    <!-- MODEL SELECTION MENU -->
+                    <div class="model-dropdown hidden" id="model-dropdown">
+                        <div class="dropdown-search">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                             </svg>
-                        </button>
+                            <input type="text" id="model-search-input" placeholder="Find a model..." autocomplete="off">
+                        </div>
+                        <div class="dropdown-list" id="dropdown-models-list"></div>
+                    </div>
+                </div>
+            </div>
 
-                        <!-- CUSTOM DROPDOWN POPOVER -->
-                        <div class="model-menu-popover hidden" id="model-menu-popover">
-                            <div class="popover-search">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="11" cy="11" r="8"></circle>
-                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            <div class="topbar-right">
+                <div class="memory-status" id="memory-status-badge" title="Memory is preserved when you switch models">
+                    <span class="memory-indicator-dot" id="memory-indicator-dot"></span>
+                    <span id="memory-status-text">Shared context</span>
+                </div>
+
+                <div class="topbar-divider"></div>
+
+                <button type="button" class="text-nav-btn" id="open-share-btn">Share</button>
+                <button type="button" class="text-nav-btn" id="open-keys-btn">API Keys</button>
+                <button type="button" class="text-nav-btn" id="new-chat-btn" title="Clear conversation (Cmd+K)">New</button>
+            </div>
+        </header>
+
+        <!-- MAIN CONVERSATION CANVAS -->
+        <main class="chat-viewport" id="chat-viewport">
+            <div class="chat-column">
+                <!-- CALM EDITORIAL EMPTY STATE -->
+                <div class="quiet-hero" id="quiet-hero">
+                    <div class="quiet-brand-emblem">n</div>
+                    <h1 class="quiet-title">What would you like to explore?</h1>
+                    <p class="quiet-subtitle">Claude, Gemini, OpenAI, and DeepSeek in one conversation. Your chat history stays with you when you switch models.</p>
+
+                    <div class="starter-suggestions">
+                        <button type="button" class="suggestion-tile" data-prompt="Analyze the trade-offs between Claude 3.5 Sonnet and GPT-4o for engineering work.">
+                            <span class="suggestion-tag">Comparison</span>
+                            <span class="suggestion-text">Claude 3.5 Sonnet vs GPT-4o for engineering</span>
+                        </button>
+                        <button type="button" class="suggestion-tile" data-prompt="Write an idiomatic Python script that parses CSVs and streams summary metrics.">
+                            <span class="suggestion-tag">Code</span>
+                            <span class="suggestion-text">Write a clean Python CSV streaming parser</span>
+                        </button>
+                        <button type="button" class="suggestion-tile" data-prompt="Explain the key ideas of quantum key distribution in plain terms.">
+                            <span class="suggestion-tag">Concept</span>
+                            <span class="suggestion-text">Explain quantum key distribution simply</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- MESSAGES LIST -->
+                <div class="conversation-stream" id="conversation-stream"></div>
+            </div>
+        </main>
+
+        <!-- FLOATING INPUT COMPOSER -->
+        <div class="composer-container">
+            <div class="composer-card">
+                <form id="chat-form" class="composer-form">
+                    <textarea
+                        id="user-input"
+                        rows="1"
+                        placeholder="Message nammaAPI..."
+                        autocomplete="off"
+                    ></textarea>
+                    <div class="composer-bar">
+                        <div class="composer-bar-left">
+                            <button type="button" class="composer-model-tag" id="composer-model-switch-btn">
+                                <span class="tag-dot" id="composer-prov-dot"></span>
+                                <span id="composer-model-name">Claude 3.5 Sonnet</span>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                            </button>
+                            <span class="composer-context-label" id="composer-context-label">Context active</span>
+                        </div>
+                        <div class="composer-bar-right">
+                            <span class="keyboard-hint">Return to send</span>
+                            <button type="submit" id="submit-btn" class="send-arrow-btn" disabled title="Send">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="12" y1="19" x2="12" y2="5"></line>
+                                    <polyline points="5 12 12 5 19 12"></polyline>
                                 </svg>
-                                <input type="text" id="model-search-input" placeholder="Search models by name or capability..." autocomplete="off">
-                            </div>
-                            <div class="popover-models-list" id="popover-models-list">
-                                <!-- Populated dynamically with rich metadata -->
-                            </div>
+                            </button>
                         </div>
                     </div>
-                </div>
-
-                <div class="header-right">
-                    <!-- MEMORY STATUS PILL -->
-                    <div class="header-stat-pill" id="header-memory-pill" title="Shared context active across models">
-                        <span class="stat-dot active"></span>
-                        <span id="header-memory-text">Shared Memory: 0</span>
-                    </div>
-
-                    <!-- SHARE BUTTON -->
-                    <button type="button" class="btn-subtle" id="nav-share-btn">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="18" cy="5" r="3"></circle>
-                            <circle cx="6" cy="12" r="3"></circle>
-                            <circle cx="18" cy="19" r="3"></circle>
-                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-                        </svg>
-                        <span>Share</span>
-                    </button>
-
-                    <!-- SETTINGS / KEY BUTTON -->
-                    <button type="button" class="btn-subtle" id="nav-key-btn">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                        </svg>
-                        <span id="nav-key-text">Keys</span>
-                    </button>
-                </div>
-            </header>
-
-            <!-- CHAT FEED -->
-            <main class="chat-feed" id="chat-feed">
-                <!-- HERO EMPTY STATE -->
-                <div class="hero-container" id="hero-empty-state">
-                    <div class="hero-aura-glow"></div>
-                    <div class="hero-badge">
-                        <span class="hero-badge-dot"></span>
-                        <span>Multi-Model AI Coordinator</span>
-                    </div>
-                    <h1 class="hero-title">High-Intelligence Unified Studio</h1>
-                    <p class="hero-subtitle">Chat with Claude, OpenAI, Gemini, and DeepSeek in one seamless flow. Switch models mid-conversation with zero context loss.</p>
-
-                    <!-- CAPABILITY CARDS -->
-                    <div class="prompt-grid">
-                        <div class="prompt-card" data-prompt="Analyze the architectural differences between Claude 3.5 Sonnet and GPT-4o for complex fullstack engineering.">
-                            <div class="card-icon-tag">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M8 12h8M12 8v8"/></svg>
-                                <span>Architecture</span>
-                            </div>
-                            <h3 class="card-title">Model comparison</h3>
-                            <p class="card-desc">Compare Sonnet 3.5 vs GPT-4o on engineering benchmarks and reasoning trade-offs.</p>
-                            <span class="card-action">Send prompt →</span>
-                        </div>
-
-                        <div class="prompt-card" data-prompt="Write an idiomatic Python async worker pool with exponential backoff retries and dead-letter queue.">
-                            <div class="card-icon-tag">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-                                <span>Code Craft</span>
-                            </div>
-                            <h3 class="card-title">Async Python worker</h3>
-                            <p class="card-desc">Generate robust production code with retry strategies and structured typing.</p>
-                            <span class="card-action">Send prompt →</span>
-                        </div>
-
-                        <div class="prompt-card" data-prompt="Explain how quantum key distribution (QKD) works step-by-step using clear physics intuition.">
-                            <div class="card-icon-tag">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                                <span>Deep Science</span>
-                            </div>
-                            <h3 class="card-title">Quantum cryptography</h3>
-                            <p class="card-desc">Deep technical walkthrough with physical analogies and security guarantees.</p>
-                            <span class="card-action">Send prompt →</span>
-                        </div>
-
-                        <div class="prompt-card" data-prompt="Synthesize a 1-page executive summary on migrating monolithic architectures to serverless microservices.">
-                            <div class="card-icon-tag">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                                <span>Strategy</span>
-                            </div>
-                            <h3 class="card-title">Executive tech proposal</h3>
-                            <p class="card-desc">Concise, impactful memo covering cost, reliability, team velocity and risks.</p>
-                            <span class="card-action">Send prompt →</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- MESSAGES STREAM CONTAINER -->
-                <div class="messages-container" id="messages-container"></div>
-            </main>
-
-            <!-- FLOATING CONSOLE DOCK -->
-            <div class="dock-wrapper">
-                <div class="dock-console">
-                    <form id="chat-form" class="console-form">
-                        <textarea
-                            id="user-input"
-                            rows="1"
-                            placeholder="Message nammaAPI... (Enter to send, Shift+Enter for new line)"
-                            autocomplete="off"
-                        ></textarea>
-                        <div class="console-bottom-bar">
-                            <div class="console-left-controls">
-                                <button type="button" class="console-pill-btn" id="dock-model-toggle-btn" title="Change active model">
-                                    <span id="dock-prov-icon-sm"></span>
-                                    <span id="dock-model-label">Claude 3.5 Sonnet</span>
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-                                </button>
-                                <span class="console-meta-hint" id="dock-memory-hint">Memory shared across models</span>
-                            </div>
-
-                            <div class="console-right-controls">
-                                <span class="char-counter" id="char-counter">0 chars</span>
-                                <button type="submit" id="submit-btn" class="console-send-btn" disabled title="Send message">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <line x1="12" y1="19" x2="12" y2="5"></line>
-                                        <polyline points="5 12 12 5 19 12"></polyline>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
+                </form>
             </div>
         </div>
     </div>
 
-    <!-- CONFIGURATION & API KEYS MODAL -->
-    <div id="config-modal" class="modal-scrim">
-        <div class="modal-dialog">
-            <div class="modal-header">
+    <!-- API KEYS MODAL -->
+    <div id="keys-modal" class="sheet-scrim">
+        <div class="sheet-modal">
+            <div class="sheet-head">
                 <div>
-                    <h2 class="modal-heading">Model & Key Configuration</h2>
-                    <p class="modal-subheading">API keys are stored exclusively in your browser localStorage. Requests proxy directly to model endpoints.</p>
+                    <h2 class="sheet-title">API Keys</h2>
+                    <p class="sheet-desc">Keys are stored on this device in your browser. Requests proxy directly to provider APIs.</p>
                 </div>
-                <button type="button" id="modal-close-btn" class="modal-close-icon" title="Close (Esc)">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                <button type="button" class="sheet-close-btn" id="keys-modal-close-btn" title="Close (Esc)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
 
-            <div class="modal-content">
-                <!-- PROVIDER TABS -->
-                <div class="settings-group">
-                    <label class="settings-label">1. Choose AI Provider</label>
-                    <div class="provider-switch-tabs">
-                        <button type="button" class="prov-tab active" data-provider-id="claude">
-                            <span class="tab-icon">🧠</span>
-                            <span>Anthropic</span>
-                        </button>
-                        <button type="button" class="prov-tab" data-provider-id="gemini">
-                            <span class="tab-icon">✨</span>
-                            <span>Google</span>
-                        </button>
-                        <button type="button" class="prov-tab" data-provider-id="openai">
-                            <span class="tab-icon">⚡</span>
-                            <span>OpenAI</span>
-                        </button>
-                        <button type="button" class="prov-tab" data-provider-id="other">
-                            <span class="tab-icon">🚀</span>
-                            <span>DeepSeek / Other</span>
-                        </button>
+            <div class="sheet-body">
+                <!-- PROVIDER SELECTOR -->
+                <div class="sheet-field-group">
+                    <label class="sheet-field-label">Provider</label>
+                    <div class="provider-button-group">
+                        <button type="button" class="prov-choice-btn active" data-provider-id="claude">Anthropic</button>
+                        <button type="button" class="prov-choice-btn" data-provider-id="gemini">Google</button>
+                        <button type="button" class="prov-choice-btn" data-provider-id="openai">OpenAI</button>
+                        <button type="button" class="prov-choice-btn" data-provider-id="other">DeepSeek / Custom</button>
                     </div>
                 </div>
 
-                <!-- SUB-PROVIDER PILLS FOR OTHER -->
-                <div id="modal-sub-platform-box" class="settings-group hidden">
-                    <label class="settings-label">Platform Endpoint</label>
-                    <div id="modal-sub-pills" class="sub-platform-row"></div>
-                    <div id="modal-custom-url-group" class="custom-field-row hidden">
-                        <label for="modal-custom-url-input">Custom OpenAI-compatible Base URL</label>
-                        <input type="text" id="modal-custom-url-input" class="modern-input" placeholder="http://localhost:11434/v1/chat/completions">
+                <!-- SUB-PLATFORM (IF OTHER) -->
+                <div id="sub-platform-box" class="sheet-field-group hidden">
+                    <label class="sheet-field-label">Platform</label>
+                    <div id="sub-pills-row" class="sub-platform-pills"></div>
+                    <div id="custom-url-box" class="field-sub-group hidden">
+                        <label for="custom-url-input">OpenAI-compatible Base URL</label>
+                        <input type="text" id="custom-url-input" class="quiet-input" placeholder="http://localhost:11434/v1/chat/completions">
                     </div>
                 </div>
 
-                <!-- MODEL SELECTION GRID -->
-                <div class="settings-group">
-                    <label class="settings-label">2. Select Active Model</label>
-                    <div id="modal-models-grid" class="modal-models-selection-grid"></div>
-                    <div id="modal-custom-model-box" class="custom-field-row hidden">
-                        <label for="modal-custom-model-input">Custom Model Identifier</label>
-                        <input type="text" id="modal-custom-model-input" class="modern-input" placeholder="e.g. deepseek-ai/deepseek-r1">
+                <!-- MODEL SELECTION -->
+                <div class="sheet-field-group">
+                    <label class="sheet-field-label">Model</label>
+                    <div id="modal-models-list" class="sheet-models-list"></div>
+                    <div id="custom-model-box" class="field-sub-group hidden">
+                        <label for="custom-model-input">Custom Model Name</label>
+                        <input type="text" id="custom-model-input" class="quiet-input" placeholder="e.g. deepseek-ai/deepseek-r1">
                     </div>
                 </div>
 
-                <!-- API KEY FIELD -->
-                <div class="settings-group">
-                    <div class="label-row">
-                        <label class="settings-label" for="modal-api-key-input">3. API Key for <span id="modal-key-provider-name">Anthropic Claude</span></label>
-                        <span id="modal-key-saved-badge" class="badge-saved hidden">✓ Configured</span>
+                <!-- KEY INPUT -->
+                <div class="sheet-field-group">
+                    <div class="field-label-row">
+                        <label class="sheet-field-label" for="modal-key-input">API Key for <span id="modal-key-provider-title">Anthropic</span></label>
+                        <span id="key-configured-badge" class="badge-configured hidden">Saved on this device</span>
                     </div>
-                    <div class="key-field-wrap">
-                        <svg class="key-lead-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                        </svg>
-                        <input type="password" id="modal-api-key-input" class="modern-input key-input-font" placeholder="sk-ant-...">
-                        <button type="button" id="modal-key-toggle-btn" class="key-visibility-btn" title="Toggle visibility">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <div class="input-with-button">
+                        <input type="password" id="modal-key-input" class="quiet-input font-mono" placeholder="sk-ant-...">
+                        <button type="button" class="toggle-mask-btn" id="toggle-key-mask-btn" title="Toggle key visibility">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                 <circle cx="12" cy="12" r="3"></circle>
                             </svg>
                         </button>
                     </div>
-                    <p class="settings-hint">Get keys from <a href="https://console.anthropic.com/" target="_blank" rel="noreferrer" id="provider-portal-link">Anthropic Console ↗</a>. Stored locally on this browser.</p>
+                    <p class="field-helper">Keys remain in your browser localStorage. <a href="https://console.anthropic.com/" target="_blank" rel="noreferrer" id="portal-external-link">Get key from provider console ↗</a></p>
                 </div>
             </div>
 
-            <div class="modal-footer">
-                <button type="button" id="modal-cancel-btn" class="btn-secondary">Cancel</button>
-                <button type="button" id="modal-save-btn" class="btn-primary">Save & Apply</button>
+            <div class="sheet-footer">
+                <button type="button" class="btn-cancel" id="keys-modal-cancel-btn">Cancel</button>
+                <button type="button" class="btn-done" id="keys-modal-save-btn">Save and apply</button>
             </div>
         </div>
     </div>
 
-    <!-- SHARE WORKSPACE MODAL -->
-    <div id="share-modal" class="modal-scrim">
-        <div class="modal-dialog share-dialog">
-            <div class="modal-header">
+    <!-- SHARE MODAL -->
+    <div id="share-modal" class="sheet-scrim">
+        <div class="sheet-modal share-width">
+            <div class="sheet-head">
                 <div>
-                    <h2 class="modal-heading">Share nammaAPI Studio</h2>
-                    <p class="modal-subheading">Access this unified multi-model workspace across all your devices.</p>
+                    <h2 class="sheet-title">Share nammaAPI</h2>
+                    <p class="sheet-desc">Use this deployment from any browser, laptop, or phone.</p>
                 </div>
-                <button type="button" id="share-modal-close-btn" class="modal-close-icon" title="Close">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                <button type="button" class="sheet-close-btn" id="share-modal-close-btn" title="Close (Esc)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
 
-            <div class="modal-content">
-                <!-- Vercel Production -->
-                <div class="share-channel-card">
-                    <div class="channel-header-row">
-                        <div class="channel-title-wrap">
-                            <span class="indicator-dot live-glow"></span>
-                            <span class="channel-name">Live Vercel Production Link</span>
-                        </div>
-                        <span class="badge-accent">Global HTTPS</span>
+            <div class="sheet-body">
+                <div class="share-option-card">
+                    <div class="share-option-header">
+                        <span class="share-status-dot dot-live"></span>
+                        <span class="share-option-title">Live Vercel Production</span>
                     </div>
-                    <p class="channel-caption">Share with anyone worldwide. Hosted on Vercel with zero local setup needed.</p>
-                    <div class="copy-input-row">
-                        <input type="text" id="public-share-input" class="modern-input code-font" readonly value="https://ai-multi-model-cli.vercel.app">
-                        <button type="button" class="btn-copy" data-input-id="public-share-input">Copy</button>
+                    <p class="share-option-subtitle">Global HTTPS link accessible anywhere on the internet.</p>
+                    <div class="share-input-row">
+                        <input type="text" id="public-share-input" class="quiet-input font-mono" readonly value="https://nammaapi.vercel.app">
+                        <button type="button" class="btn-copy-link" data-input-id="public-share-input">Copy</button>
                     </div>
                 </div>
 
-                <!-- Local LAN Network -->
-                <div class="share-channel-card">
-                    <div class="channel-header-row">
-                        <div class="channel-title-wrap">
-                            <span class="indicator-dot lan-glow"></span>
-                            <span class="channel-name">Local Wi-Fi Network</span>
-                        </div>
-                        <span class="badge-subtle">Mobile & Tablet</span>
+                <div class="share-option-card">
+                    <div class="share-option-header">
+                        <span class="share-status-dot dot-wifi"></span>
+                        <span class="share-option-title">Local Wi-Fi Network</span>
                     </div>
-                    <p class="channel-caption">Open on phones and tablets connected to the same Wi-Fi router.</p>
-                    <div class="copy-input-row">
-                        <input type="text" id="lan-share-input" class="modern-input code-font" readonly value="http://192.168.31.195:5000">
-                        <button type="button" class="btn-copy" data-input-id="lan-share-input">Copy</button>
+                    <p class="share-option-subtitle">For phones or tablets on the same local network.</p>
+                    <div class="share-input-row">
+                        <input type="text" id="lan-share-input" class="quiet-input font-mono" readonly value="http://192.168.31.195:5000">
+                        <button type="button" class="btn-copy-link" data-input-id="lan-share-input">Copy</button>
                     </div>
                 </div>
 
-                <!-- Localhost -->
-                <div class="share-channel-card">
-                    <div class="channel-header-row">
-                        <div class="channel-title-wrap">
-                            <span class="indicator-dot dev-glow"></span>
-                            <span class="channel-name">Localhost Loopback</span>
-                        </div>
-                        <span class="badge-subtle">Dev Machine</span>
+                <div class="share-option-card">
+                    <div class="share-option-header">
+                        <span class="share-status-dot dot-local"></span>
+                        <span class="share-option-title">Localhost Loopback</span>
                     </div>
-                    <p class="channel-caption">Direct localhost port on this computer.</p>
-                    <div class="copy-input-row">
-                        <input type="text" id="local-share-input" class="modern-input code-font" readonly value="http://localhost:5000">
-                        <button type="button" class="btn-copy" data-input-id="local-share-input">Copy</button>
+                    <p class="share-option-subtitle">Direct browser port on this computer.</p>
+                    <div class="share-input-row">
+                        <input type="text" id="local-share-input" class="quiet-input font-mono" readonly value="http://localhost:5000">
+                        <button type="button" class="btn-copy-link" data-input-id="local-share-input">Copy</button>
                     </div>
                 </div>
             </div>
 
-            <div class="modal-footer">
-                <button type="button" id="share-modal-done-btn" class="btn-primary">Done</button>
+            <div class="sheet-footer">
+                <button type="button" class="btn-done" id="share-modal-done-btn">Done</button>
             </div>
         </div>
     </div>
 
-    <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="/static/app.js"></script>
