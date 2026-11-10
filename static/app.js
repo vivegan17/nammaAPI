@@ -1,10 +1,11 @@
-// nammaAPI — Studio Workspace Controller
+// nammaAPI — Studio Workspace Controller with Official Logos & Effort Controls
 
 let appConfig = null;
 
 // Application State
 let activeProviderId = localStorage.getItem('namma_active_provider') || 'claude';
-let activeModelId = localStorage.getItem('namma_active_model') || 'claude-3-5-sonnet-20241022';
+let activeModelId = localStorage.getItem('namma_active_model') || 'claude-3-7-sonnet-20250219';
+let activeEffort = localStorage.getItem('namma_active_effort') || 'medium'; // none, low, medium, high, max
 let activeBaseUrl = localStorage.getItem('namma_active_base_url') || null;
 
 // Persistent Local Data
@@ -12,80 +13,92 @@ let savedKeys = JSON.parse(localStorage.getItem('namma_api_keys') || '{}');
 let chatMemory = JSON.parse(localStorage.getItem('namma_chat_memory') || '[]');
 let pendingMessage = null;
 
-const PROVIDER_NAMES = {
-    claude: 'Anthropic Claude',
-    gemini: 'Google Gemini',
-    openai: 'OpenAI',
-    other: 'DeepSeek / Custom'
+// ── OFFICIAL PROVIDER SVG LOGOS ─────────────────────────
+const PROVIDER_LOGOS = {
+    claude: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M13.8 3L8.6 21H11.5L16.7 3H13.8Z" fill="#D97706"/><path d="M4 10.6L19 14.8L19.8 12L4.8 7.8L4 10.6Z" fill="#D97706"/><path d="M7.8 19.8L16.2 4.2L13.7 2.8L5.3 18.4L7.8 19.8Z" fill="#D97706"/></svg>`,
+    openai: `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M22.28 9.5c-.14-.84-.52-1.63-1.1-2.26a5.57 5.57 0 0 0-4.04-1.93c-.4-.73-.97-1.34-1.66-1.78a5.5 5.5 0 0 0-5.6-.27 5.48 5.48 0 0 0-2.3 2.15 5.57 5.57 0 0 0-3.32 1.34 5.54 5.54 0 0 0-1.8 3.39c-.74.37-1.36.94-1.8 1.65a5.52 5.52 0 0 0-.32 4.97 5.57 5.57 0 0 0 1.93 2.38 5.5 5.5 0 0 0 1.66 4.7 5.53 5.53 0 0 0 5.6.27 5.5 5.5 0 0 0 2.3-2.15 5.55 5.55 0 0 0 3.32-1.34c.73-.59 1.3-1.34 1.66-2.2.73-.37 1.35-.94 1.8-1.65a5.52 5.52 0 0 0 .32-4.97c-.37-.7-.93-1.3-1.66-1.74zm-8.8 11.23a3.8 3.8 0 0 1-2.22-.7l1.73-1a2.1 2.1 0 0 0 1.05-.18 2.08 2.08 0 0 0 .78-.71l2.45-4.24a.8.8 0 0 1 .4-.35.8.8 0 0 1 .53-.05l1.7.46a3.83 3.83 0 0 1-6.42 6.77zm-7.6-3.87a3.8 3.8 0 0 1-.3-2.31l1.73 1a2.1 2.1 0 0 0 1.06.63 2.08 2.08 0 0 0 1.06 0l4.9-1.31a.8.8 0 0 1 .52.05.8.8 0 0 1 .35.4l-.46 1.7a3.83 3.83 0 0 1-8.86-.16zm-1.18-8.2c.45-.66 1.07-1.18 1.8-1.5l-.02 2a2.1 2.1 0 0 0-.02 1.06 2.08 2.08 0 0 0 .28 1.03l2.45 4.24a.8.8 0 0 1 .05.53.8.8 0 0 1-.26.43l-1.46.96a3.83 3.83 0 0 1-2.82-8.75zm12.3 2.04l-4.9 1.31a.8.8 0 0 1-.52-.05.8.8 0 0 1-.35-.4l.46-1.7a3.83 3.83 0 0 1 8.86.16 3.8 3.8 0 0 1 .3 2.31l-1.73-1a2.1 2.1 0 0 0-1.06-.63 2.08 2.08 0 0 0-1.06 0zm2.25 4.25c-.45.66-1.07 1.18-1.8 1.5l.02-2a2.1 2.1 0 0 0 .02-1.06 2.08 2.08 0 0 0-.28-1.03l-2.45-4.24a.8.8 0 0 1-.05-.53.8.8 0 0 1 .26-.43l1.46-.96a3.83 3.83 0 0 1 2.82 8.75z"/></svg>`,
+    gemini: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" fill="#38BDF8"/><path d="M12 5.5L13.8 10.2L18.5 12L13.8 13.8L12 18.5L10.2 13.8L5.5 12L10.2 10.2L12 5.5Z" fill="#818CF8"/></svg>`,
+    deepseek: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 13.5C3 8.8 6.8 5 11.5 5C16.2 5 20 8.8 20 13.5C20 17 17.5 19.9 14.2 20.6L12 21.5L9.8 20.6C6.5 19.9 4 17 4 13.5H3Z" stroke="#38BDF8" stroke-width="2" stroke-linecap="round"/><circle cx="9" cy="11" r="1.5" fill="#38BDF8"/><path d="M13 14C13 14 15 13 16 11" stroke="#38BDF8" stroke-width="1.8" stroke-linecap="round"/><path d="M19 10C21 8.5 22 6.5 22 5" stroke="#38BDF8" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+    grok: `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`,
+    perplexity: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2V22M4 7L20 17M20 7L4 17" stroke="#2DD4BF" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="12" r="3" stroke="#2DD4BF" stroke-width="2"/></svg>`,
+    llama: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 6C4.24 6 2 8.24 2 11C2 13.76 4.24 16 7 16C9.28 16 11.2 14.48 11.8 12.38C12.2 12.38 12.6 12.38 13 12.38C13.6 14.48 15.52 16 17.8 16C20.56 16 22.8 13.76 22.8 11C22.8 8.24 20.56 6 17.8 6C15.52 6 13.6 7.52 13 9.62C12.6 9.62 12.2 9.62 11.8 9.62C11.2 7.52 9.28 6 7 6Z" stroke="#3B82F6" stroke-width="2.2" stroke-linecap="round"/></svg>`,
+    qwen: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2L20.66 7V17L12 22L3.34 17V7L12 2Z" stroke="#A855F7" stroke-width="2" stroke-linejoin="round"/><path d="M12 6L17.2 9V15L12 18L6.8 15V9L12 6Z" fill="#A855F7"/></svg>`,
+    cursor: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2L21 7V17L12 22L3 17V7L12 2Z" stroke="#E4E4E7" stroke-width="2" stroke-linejoin="round"/><path d="M12 2V22M3 7L21 17M21 7L3 17" stroke="#E4E4E7" stroke-width="1.5"/></svg>`,
+    notebooklm: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="#60A5FA" stroke-width="2"/><path d="M8 8H16M8 12H16M8 16H13" stroke="#60A5FA" stroke-width="2" stroke-linecap="round"/></svg>`,
+    other: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="#A1A1AA" stroke-width="2"/><path d="M7 10L10 13L7 16M13 16H17" stroke="#A1A1AA" stroke-width="2" stroke-linecap="round"/></svg>`
 };
 
-const PROVIDER_COLORS = {
-    claude: '#d97706',
-    gemini: '#38bdf8',
-    openai: '#10b981',
-    other: '#a855f7'
-};
-
-// DOM Utilities
+// DOM Elements
 const $ = (id) => document.getElementById(id);
 const $$ = (sel) => document.querySelectorAll(sel);
 
+// Navigation & Model Menu
+const modelPopoverTrigger = $('model-popover-trigger');
+const headerLogoBox = $('header-logo-box');
+const headerModelName = $('header-model-name');
+const headerEffortTag = $('header-effort-tag');
+const modelMenuPanel = $('model-menu-panel');
+const providerRail = $('provider-rail');
+const modelFilterInput = $('model-filter-input');
+const menuContentScroll = $('menu-content-scroll');
+const featuredModelsList = $('featured-models-list');
+const effortTriggerRow = $('effort-trigger-row');
+const currentEffortLabel = $('current-effort-label');
+const moreModelsRow = $('more-models-row');
+const moreModelsCount = $('more-models-count');
+const effortSubmenu = $('effort-submenu');
+const effortBackBtn = $('effort-back-btn');
+const legacyModelsSubmenu = $('legacy-models-submenu');
+const legacyBackBtn = $('legacy-back-btn');
+const legacyModelsList = $('legacy-models-list');
+const legacySubmenuTitle = $('legacy-submenu-title');
+
+// Composer Elements
+const composerModelBtn = $('composer-model-btn');
+const composerLogoBox = $('composer-logo-box');
+const composerModelTitle = $('composer-model-title');
+const composerEffortChip = $('composer-effort-chip');
+const heroProviderLogo = $('hero-provider-logo');
+
 // Main Views
 const chatViewport = $('chat-viewport');
-const quietHero = $('quiet-hero');
-const conversationStream = $('conversation-stream');
+const editorialHero = $('editorial-hero');
+const messagesContainer = $('messages-container');
 const chatForm = $('chat-form');
 const userInput = $('user-input');
 const submitBtn = $('submit-btn');
 
-// Topbar Controls
-const modelPopoverTrigger = $('model-popover-trigger');
-const activeProvDot = $('active-prov-dot');
-const activeModelText = $('active-model-text');
-const modelDropdown = $('model-dropdown');
-const modelSearchInput = $('model-search-input');
-const dropdownModelsList = $('dropdown-models-list');
-const memoryStatusBadge = $('memory-status-badge');
-const memoryIndicatorDot = $('memory-indicator-dot');
-const memoryStatusText = $('memory-status-text');
-
-// Composer Controls
-const composerModelSwitchBtn = $('composer-model-switch-btn');
-const composerProvDot = $('composer-prov-dot');
-const composerModelName = $('composer-model-name');
-const composerContextLabel = $('composer-context-label');
+// Topbar Utility Buttons
+const memoryPill = $('memory-pill');
+const memoryDot = $('memory-dot');
+const memoryCountLabel = $('memory-count-label');
+const openShareBtn = $('open-share-btn');
+const openKeysBtn = $('open-keys-btn');
+const newChatBtn = $('new-chat-btn');
 
 // Modals
 const keysModal = $('keys-modal');
-const openKeysBtn = $('open-keys-btn');
 const keysModalCloseBtn = $('keys-modal-close-btn');
 const keysModalCancelBtn = $('keys-modal-cancel-btn');
 const keysModalSaveBtn = $('keys-modal-save-btn');
-
-const shareModal = $('share-modal');
-const openShareBtn = $('open-share-btn');
-const shareModalCloseBtn = $('share-modal-close-btn');
-const shareModalDoneBtn = $('share-modal-done-btn');
-const newChatBtn = $('new-chat-btn');
-
-// Key Form Elements
+const keysProviderGrid = $('keys-provider-grid');
+const keysModelsList = $('keys-models-list');
 const modalKeyInput = $('modal-key-input');
 const toggleKeyMaskBtn = $('toggle-key-mask-btn');
 const modalKeyProviderTitle = $('modal-key-provider-title');
-const keyConfiguredBadge = $('key-configured-badge');
+const keySavedBadge = $('key-saved-badge');
 const portalExternalLink = $('portal-external-link');
-const modalModelsList = $('modal-models-list');
-const customModelBox = $('custom-model-box');
+const customModelRow = $('custom-model-row');
 const customModelInput = $('custom-model-input');
-const subPlatformBox = $('sub-platform-box');
-const subPillsRow = $('sub-pills-row');
-const customUrlBox = $('custom-url-box');
-const customUrlInput = $('custom-url-input');
 
-// Modal Selection Temp State
+const shareModal = $('share-modal');
+const shareModalCloseBtn = $('share-modal-close-btn');
+const shareModalDoneBtn = $('share-modal-done-btn');
+
+// Temporary Modal Selection
 let modalSelectedProvider = 'claude';
-let modalSelectedModel = 'claude-3-5-sonnet-20241022';
-let modalSelectedBaseUrl = null;
+let modalSelectedModel = 'claude-3-7-sonnet-20250219';
+let railSelectedProvider = activeProviderId;
 
 // ── INITIALIZATION ──────────────────────────────────────
 
@@ -95,10 +108,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const data = await res.json();
         appConfig = data.providers;
     } catch (err) {
-        console.error('Failed to load configuration:', err);
+        console.error('Failed to load model registry:', err);
     }
 
-    syncState(activeProviderId, activeModelId);
+    syncActiveState(activeProviderId, activeModelId, activeEffort);
     renderConversation();
     updateMemoryUI();
     fetchShareInfo();
@@ -115,13 +128,13 @@ async function fetchShareInfo() {
         if (info.lan_url && $('lan-share-input')) $('lan-share-input').value = info.lan_url;
         if (info.localhost_url && $('local-share-input')) $('local-share-input').value = info.localhost_url;
     } catch (e) {
-        console.warn('Share info fallback active');
+        console.warn('Share info fallback');
     }
 }
 
 // ── STATE & MODEL SYNCHRONIZATION ───────────────────────
 
-function syncState(providerId, modelId) {
+function syncActiveState(providerId, modelId, effort) {
     activeProviderId = providerId;
     localStorage.setItem('namma_active_provider', providerId);
 
@@ -130,21 +143,36 @@ function syncState(providerId, modelId) {
         localStorage.setItem('namma_active_model', modelId);
     }
 
-    const dotColor = PROVIDER_COLORS[providerId] || '#fff';
-    const displayName = getModelName(activeModelId);
+    if (effort) {
+        activeEffort = effort;
+        localStorage.setItem('namma_active_effort', effort);
+    }
+
+    const logoSvg = PROVIDER_LOGOS[providerId] || PROVIDER_LOGOS.other;
+    const modelName = getModelDisplayName(activeModelId);
+    const effortCapitalized = activeEffort.charAt(0).toUpperCase() + activeEffort.slice(1);
 
     // Update Topbar
-    activeModelText.textContent = displayName;
-    activeProvDot.style.backgroundColor = dotColor;
+    headerLogoBox.innerHTML = logoSvg;
+    headerModelName.textContent = modelName;
+    headerEffortTag.textContent = effortCapitalized;
+    currentEffortLabel.textContent = effortCapitalized;
 
-    // Update Composer Tag
-    composerModelName.textContent = displayName;
-    composerProvDot.style.backgroundColor = dotColor;
+    // Update Composer
+    composerLogoBox.innerHTML = logoSvg;
+    composerModelTitle.textContent = modelName;
+    composerEffortChip.textContent = effortCapitalized;
 
-    buildDropdownList();
+    // Update Hero Emblem
+    if (heroProviderLogo) {
+        heroProviderLogo.innerHTML = logoSvg;
+    }
+
+    buildProviderRail();
+    buildModelListing(activeProviderId);
 }
 
-function getModelName(modelId) {
+function getModelDisplayName(modelId) {
     if (!appConfig) return modelId;
     for (const key of Object.keys(appConfig)) {
         const p = appConfig[key];
@@ -152,100 +180,143 @@ function getModelName(modelId) {
             const found = p.models.find(m => m.id === modelId);
             if (found) return found.name;
         }
-        if (p.sub_providers) {
-            for (const sKey of Object.keys(p.sub_providers)) {
-                const sub = p.sub_providers[sKey];
-                const found = (sub.models || []).find(m => m.id === modelId);
-                if (found) return found.name;
-            }
-        }
     }
     return modelId;
 }
 
-// ── MODEL PICKER DROPDOWN ───────────────────────────────
+// ── MODEL POPOVER MENU BUILDER ──────────────────────────
 
-function buildDropdownList(filter = '') {
-    if (!appConfig || !dropdownModelsList) return;
-    dropdownModelsList.innerHTML = '';
-    const q = filter.toLowerCase().trim();
+function buildProviderRail() {
+    if (!appConfig || !providerRail) return;
+    providerRail.innerHTML = '';
 
-    const providerMap = { claude: '3', gemini: '2', openai: '1', other: '4' };
+    Object.keys(appConfig).forEach(provId => {
+        const p = appConfig[provId];
+        const item = document.createElement('div');
+        const isActive = provId === railSelectedProvider;
+        item.className = `rail-item ${isActive ? 'active' : ''}`;
+        item.innerHTML = `
+            <span class="rail-icon">${PROVIDER_LOGOS[provId] || PROVIDER_LOGOS.other}</span>
+            <span class="rail-name">${escapeHtml(p.name.replace('Anthropic ', '').replace('Google ', '').replace('Meta ', '').replace('Alibaba ', ''))}</span>
+        `;
 
-    Object.keys(providerMap).forEach(provId => {
-        const pData = appConfig[providerMap[provId]];
-        if (!pData) return;
-
-        let models = [];
-        if (provId === 'other') {
-            for (const sKey of Object.keys(pData.sub_providers || {})) {
-                const sub = pData.sub_providers[sKey];
-                (sub.models || []).forEach(m => models.push({ ...m, subName: sub.name, subUrl: sub.base_url }));
-            }
-        } else {
-            models = pData.models || [];
-        }
-
-        const filtered = models.filter(m =>
-            !q || m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q) || (m.desc && m.desc.toLowerCase().includes(q))
-        );
-
-        if (filtered.length === 0) return;
-
-        const header = document.createElement('div');
-        header.className = 'dropdown-section-tag';
-        header.textContent = pData.name;
-        dropdownModelsList.appendChild(header);
-
-        filtered.forEach(m => {
-            const row = document.createElement('div');
-            const isSelected = m.id === activeModelId;
-            row.className = `dropdown-row ${isSelected ? 'selected' : ''}`;
-            row.innerHTML = `
-                <div class="dropdown-row-main">
-                    <span class="dropdown-row-name">${escapeHtml(m.name)}</span>
-                    <span class="dropdown-row-desc">${escapeHtml(m.desc || m.id)}</span>
-                </div>
-                <span class="dropdown-row-check">✓</span>
-            `;
-
-            row.addEventListener('click', () => {
-                syncState(provId, m.id);
-                if (m.subUrl) {
-                    activeBaseUrl = m.subUrl;
-                    localStorage.setItem('namma_active_base_url', activeBaseUrl);
-                }
-                closeDropdown();
-            });
-
-            dropdownModelsList.appendChild(row);
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            railSelectedProvider = provId;
+            $$('.rail-item').forEach(r => r.classList.remove('active'));
+            item.classList.add('active');
+            closeSubmenus();
+            buildModelListing(provId);
         });
+
+        providerRail.appendChild(item);
     });
 }
 
-function openDropdown() {
-    modelDropdown.classList.remove('hidden');
-    modelSearchInput.value = '';
-    modelSearchInput.focus();
-    buildDropdownList();
+function buildModelListing(providerId, searchQuery = '') {
+    if (!appConfig) return;
+    const p = appConfig[providerId];
+    if (!p) return;
+
+    featuredModelsList.innerHTML = '';
+    const q = searchQuery.toLowerCase().trim();
+
+    const featuredModels = (p.models || []).filter(m => !m.category || m.category === 'featured');
+    const legacyModels = (p.models || []).filter(m => m.category === 'legacy');
+
+    // Update more models count badge
+    if (moreModelsCount) {
+        moreModelsCount.textContent = `${legacyModels.length} models`;
+    }
+
+    const filtered = (q ? p.models : featuredModels).filter(m =>
+        !q || m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q) || (m.desc && m.desc.toLowerCase().includes(q))
+    );
+
+    filtered.forEach(m => {
+        const card = document.createElement('div');
+        const isSelected = m.id === activeModelId;
+        card.className = `featured-model-card ${isSelected ? 'selected' : ''}`;
+        card.innerHTML = `
+            <div class="f-model-meta">
+                <div class="f-model-name-row">
+                    <span class="f-model-title">${escapeHtml(m.name)}</span>
+                    ${m.badge ? `<span class="f-badge">${escapeHtml(m.badge)}</span>` : ''}
+                </div>
+                <span class="f-model-desc">${escapeHtml(m.desc || m.id)}</span>
+            </div>
+            <span class="f-model-check">✓</span>
+        `;
+
+        card.addEventListener('click', () => {
+            syncActiveState(providerId, m.id, activeEffort);
+            closeModelPopover();
+        });
+
+        featuredModelsList.appendChild(card);
+    });
+
+    // Populate Legacy Models Submenu List
+    buildLegacySubmenu(providerId, legacyModels);
 }
 
-function closeDropdown() {
-    modelDropdown.classList.add('hidden');
+function buildLegacySubmenu(providerId, legacyModels) {
+    if (!legacyModelsList) return;
+    legacyModelsList.innerHTML = '';
+    const p = appConfig[providerId];
+    if (legacySubmenuTitle) legacySubmenuTitle.textContent = `${p.name} (All Versions)`;
+
+    legacyModels.forEach(m => {
+        const item = document.createElement('div');
+        const isSelected = m.id === activeModelId;
+        item.className = `submenu-item ${isSelected ? 'selected' : ''}`;
+        item.innerHTML = `
+            <div class="sub-item-meta">
+                <span class="sub-item-title">${escapeHtml(m.name)}</span>
+                <span class="sub-item-desc">${escapeHtml(m.desc || m.id)}</span>
+            </div>
+            <span class="sub-check">✓</span>
+        `;
+
+        item.addEventListener('click', () => {
+            syncActiveState(providerId, m.id, activeEffort);
+            closeModelPopover();
+        });
+
+        legacyModelsList.appendChild(item);
+    });
+}
+
+function closeSubmenus() {
+    effortSubmenu.classList.add('hidden');
+    legacyModelsSubmenu.classList.add('hidden');
+    menuContentScroll.classList.remove('hidden');
+}
+
+function openModelPopover() {
+    modelMenuPanel.classList.remove('hidden');
+    railSelectedProvider = activeProviderId;
+    buildProviderRail();
+    buildModelListing(activeProviderId);
+    closeSubmenus();
+    modelFilterInput.value = '';
+    modelFilterInput.focus();
+}
+
+function closeModelPopover() {
+    modelMenuPanel.classList.add('hidden');
+    closeSubmenus();
 }
 
 // ── MEMORY STATUS ───────────────────────────────────────
 
 function updateMemoryUI() {
     const count = chatMemory.length;
-    if (memoryStatusText) {
-        memoryStatusText.textContent = count > 0 ? `${count} turn${count === 1 ? '' : 's'} shared` : 'Shared context';
+    if (memoryCountLabel) {
+        memoryCountLabel.textContent = count > 0 ? `${count} turn${count === 1 ? '' : 's'} shared` : 'Shared memory';
     }
-    if (memoryIndicatorDot) {
-        memoryIndicatorDot.classList.toggle('idle', count === 0);
-    }
-    if (composerContextLabel) {
-        composerContextLabel.textContent = count > 0 ? `${count} turns in memory` : 'Context active';
+    if (memoryDot) {
+        memoryDot.classList.toggle('idle', count === 0);
     }
 }
 
@@ -253,15 +324,15 @@ function updateMemoryUI() {
 
 function renderConversation() {
     if (!chatMemory || chatMemory.length === 0) {
-        quietHero.classList.remove('hidden');
-        conversationStream.innerHTML = '';
+        editorialHero.classList.remove('hidden');
+        messagesContainer.innerHTML = '';
         return;
     }
 
-    quietHero.classList.add('hidden');
-    conversationStream.innerHTML = '';
+    editorialHero.classList.add('hidden');
+    messagesContainer.innerHTML = '';
     chatMemory.forEach(msg => {
-        appendMessage(msg.role, msg.content, msg.model, msg.provider);
+        appendMessageTurn(msg.role, msg.content, msg.model, msg.provider);
     });
 }
 
@@ -274,7 +345,7 @@ async function sendMessage(text) {
         return;
     }
 
-    quietHero.classList.add('hidden');
+    editorialHero.classList.add('hidden');
     userInput.value = '';
     userInput.style.height = 'auto';
     submitBtn.disabled = true;
@@ -287,15 +358,15 @@ async function sendMessage(text) {
         provider: null,
         timestamp: Date.now()
     };
-    appendMessage('user', text);
+    appendMessageTurn('user', text);
     chatMemory.push(userTurn);
     localStorage.setItem('namma_chat_memory', JSON.stringify(chatMemory));
     updateMemoryUI();
 
-    // 2. Add Thinking Turn
-    const thinkingRow = appendThinking();
+    // 2. Add Thinking Indicator
+    const thinkingRow = appendThinkingRow();
 
-    // 3. Prepare Multi-turn API history
+    // 3. Multi-turn payload
     const apiMessages = chatMemory.map(m => ({
         role: m.role,
         content: m.content
@@ -307,6 +378,7 @@ async function sendMessage(text) {
             model_id: activeModelId,
             api_key: key,
             base_url: activeBaseUrl,
+            effort: activeEffort,
             messages: apiMessages
         };
 
@@ -327,20 +399,20 @@ async function sendMessage(text) {
                 provider: activeProviderId,
                 timestamp: Date.now()
             };
-            appendMessage('assistant', data.reply, activeModelId, activeProviderId);
+            appendMessageTurn('assistant', data.reply, activeModelId, activeProviderId);
             chatMemory.push(assistantTurn);
             localStorage.setItem('namma_chat_memory', JSON.stringify(chatMemory));
             updateMemoryUI();
         } else {
-            const err = data.error || 'The provider returned an error.';
-            appendError(err);
+            const err = data.error || 'The model provider failed to return a response.';
+            appendErrorRow(err);
             chatMemory.pop();
             localStorage.setItem('namma_chat_memory', JSON.stringify(chatMemory));
             updateMemoryUI();
         }
     } catch (err) {
         thinkingRow.remove();
-        appendError(`Network connection error: ${err.message}`);
+        appendErrorRow(`Network connection error: ${err.message}`);
         chatMemory.pop();
         localStorage.setItem('namma_chat_memory', JSON.stringify(chatMemory));
         updateMemoryUI();
@@ -350,30 +422,34 @@ async function sendMessage(text) {
     }
 }
 
-function appendMessage(role, content, modelId = null, providerId = null) {
-    const row = document.createElement('div');
-    row.className = `message-row ${role}`;
+function appendMessageTurn(role, content, modelId = null, providerId = null) {
+    const turn = document.createElement('div');
+    turn.className = `message-turn ${role}`;
 
     if (role === 'user') {
-        row.innerHTML = `<div class="user-bubble-box">${escapeHtml(content)}</div>`;
+        turn.innerHTML = `<div class="user-message-bubble">${escapeHtml(content)}</div>`;
     } else {
         const parsed = marked.parse(content);
-        const provLabel = PROVIDER_NAMES[providerId] || 'AI Model';
-        const modelLabel = modelId ? `${provLabel} · ${modelId}` : 'nammaAPI';
+        const provName = appConfig && appConfig[providerId] ? appConfig[providerId].name : 'AI Model';
+        const modelLabel = modelId ? `${provName} · ${modelId}` : 'nammaAPI';
+        const logo = PROVIDER_LOGOS[providerId] || PROVIDER_LOGOS.other;
 
-        row.innerHTML = `
-            <div class="ai-entry">
-                <div class="ai-meta-bar">
-                    <span class="ai-meta-author">${escapeHtml(modelLabel)}</span>
-                    <div class="ai-meta-actions">
-                        <button type="button" class="btn-mini-copy" title="Copy text">Copy</button>
+        turn.innerHTML = `
+            <div class="assistant-wrapper">
+                <div class="assistant-meta-header">
+                    <div class="assistant-identity">
+                        <span>${logo}</span>
+                        <span>${escapeHtml(modelLabel)}</span>
+                    </div>
+                    <div class="assistant-actions">
+                        <button type="button" class="copy-text-btn" title="Copy text">Copy</button>
                     </div>
                 </div>
-                <div class="ai-text-body">${parsed}</div>
+                <div class="assistant-text-content">${parsed}</div>
             </div>
         `;
 
-        const copyBtn = row.querySelector('.btn-mini-copy');
+        const copyBtn = turn.querySelector('.copy-text-btn');
         if (copyBtn) {
             copyBtn.addEventListener('click', () => {
                 navigator.clipboard.writeText(content).then(() => {
@@ -383,50 +459,50 @@ function appendMessage(role, content, modelId = null, providerId = null) {
             });
         }
 
-        row.querySelectorAll('pre code').forEach(b => hljs.highlightElement(b));
+        turn.querySelectorAll('pre code').forEach(b => hljs.highlightElement(b));
     }
 
-    conversationStream.appendChild(row);
+    messagesContainer.appendChild(turn);
     chatViewport.scrollTop = chatViewport.scrollHeight;
-    return row;
+    return turn;
 }
 
-function appendThinking() {
-    const row = document.createElement('div');
-    row.className = 'message-row assistant';
-    row.innerHTML = `
-        <div class="ai-entry">
-            <div class="ai-thinking-row">
-                <span class="pulse-dot"></span>
-                <span>Thinking with shared memory...</span>
+function appendThinkingRow() {
+    const turn = document.createElement('div');
+    turn.className = 'message-turn assistant';
+    turn.innerHTML = `
+        <div class="assistant-wrapper">
+            <div class="thinking-box">
+                <span class="thinking-pulse-dot"></span>
+                <span>${escapeHtml(getModelDisplayName(activeModelId))} is thinking (${activeEffort} effort)...</span>
             </div>
         </div>
     `;
-    conversationStream.appendChild(row);
+    messagesContainer.appendChild(turn);
     chatViewport.scrollTop = chatViewport.scrollHeight;
-    return row;
+    return turn;
 }
 
-function appendError(errorMsg) {
-    const row = document.createElement('div');
-    row.className = 'message-row assistant';
-    row.innerHTML = `
-        <div class="ai-entry">
-            <div class="ai-error-box">
-                <span class="ai-error-title">Request unsuccessful</span>
-                <span class="ai-error-desc">${escapeHtml(errorMsg)}</span>
-                <button type="button" class="ai-error-btn" onclick="openKeysModal('${activeProviderId}')">Update ${activeProviderId.toUpperCase()} API key</button>
+function appendErrorRow(errorMsg) {
+    const turn = document.createElement('div');
+    turn.className = 'message-turn assistant';
+    turn.innerHTML = `
+        <div class="assistant-wrapper">
+            <div class="error-box">
+                <span class="error-title">Request unsuccessful</span>
+                <span class="error-desc">${escapeHtml(errorMsg)}</span>
+                <button type="button" class="error-retry-btn" onclick="openKeysModal('${activeProviderId}')">Configure ${activeProviderId.toUpperCase()} API key</button>
             </div>
         </div>
     `;
-    conversationStream.appendChild(row);
+    messagesContainer.appendChild(turn);
     chatViewport.scrollTop = chatViewport.scrollHeight;
 }
 
 // ── KEYS CONFIGURATION MODAL ────────────────────────────
 
 function openKeysModal(providerId) {
-    setupKeysModalFor(providerId || activeProviderId);
+    setupKeysModal(providerId || activeProviderId);
     keysModal.classList.add('active');
 }
 
@@ -434,191 +510,143 @@ function closeKeysModal() {
     keysModal.classList.remove('active');
 }
 
-function setupKeysModalFor(pid) {
+function setupKeysModal(pid) {
     modalSelectedProvider = pid;
-
-    $$('.prov-choice-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.providerId === pid);
-    });
-
     if (!appConfig) return;
 
-    const providerMap = { claude: '3', gemini: '2', openai: '1', other: '4' };
-    const pData = appConfig[providerMap[pid]];
+    // Build provider tabs with official logos
+    keysProviderGrid.innerHTML = '';
+    Object.keys(appConfig).forEach(k => {
+        const p = appConfig[k];
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = `keys-prov-chip ${k === pid ? 'active' : ''}`;
+        chip.innerHTML = `
+            <span>${PROVIDER_LOGOS[k] || PROVIDER_LOGOS.other}</span>
+            <span>${escapeHtml(p.name.replace('Anthropic ', '').replace('Google ', '').replace('Meta ', '').replace('Alibaba ', ''))}</span>
+        `;
+        chip.addEventListener('click', () => {
+            setupKeysModal(k);
+        });
+        keysProviderGrid.appendChild(chip);
+    });
 
+    const pData = appConfig[pid];
     modalKeyProviderTitle.textContent = pData.name;
-
-    const portals = {
-        claude: 'https://console.anthropic.com/',
-        openai: 'https://platform.openai.com/api-keys',
-        gemini: 'https://aistudio.google.com/app/apikey',
-        other: 'https://platform.deepseek.com/'
-    };
     if (portalExternalLink) {
-        portalExternalLink.href = portals[pid] || 'https://platform.deepseek.com/';
+        portalExternalLink.href = pData.portal_url || 'https://console.anthropic.com/';
         portalExternalLink.textContent = `Get key from ${pData.name} console ↗`;
     }
 
     const existingKey = savedKeys[pid] || '';
     modalKeyInput.value = existingKey;
-    keyConfiguredBadge.classList.toggle('hidden', !existingKey);
+    keySavedBadge.classList.toggle('hidden', !existingKey);
 
-    const placeholders = {
-        claude: 'sk-ant-api03-...',
-        openai: 'sk-proj-...',
-        gemini: 'AIzaSy...',
-        other: 'sk-...'
-    };
-    modalKeyInput.placeholder = placeholders[pid] || 'Enter API key...';
-
-    if (pid === 'other') {
-        subPlatformBox.classList.remove('hidden');
-        renderSubPlatforms(pData.sub_providers);
-    } else {
-        subPlatformBox.classList.add('hidden');
-        renderSheetModels(pData.models || []);
-    }
-}
-
-function renderSubPlatforms(subProviders) {
-    subPillsRow.innerHTML = '';
-    const keys = Object.keys(subProviders || {});
-
-    keys.forEach((k, idx) => {
-        const sp = subProviders[k];
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = `sub-plat-tag ${idx === 0 ? 'active' : ''}`;
-        btn.textContent = sp.name;
-
-        btn.addEventListener('click', () => {
-            $$('#sub-pills-row .sub-plat-tag').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            modalSelectedBaseUrl = sp.base_url;
-
-            if (sp.base_url === 'custom') {
-                customUrlBox.classList.remove('hidden');
-                modalSelectedBaseUrl = customUrlInput.value.trim() || 'http://localhost:11434/v1/chat/completions';
-            } else {
-                customUrlBox.classList.add('hidden');
-            }
-
-            renderSheetModels(sp.models || []);
-        });
-
-        subPillsRow.appendChild(btn);
-    });
-
-    if (keys.length > 0) {
-        modalSelectedBaseUrl = subProviders[keys[0]].base_url;
-        renderSheetModels(subProviders[keys[0]].models || []);
-    }
-}
-
-function renderSheetModels(models) {
-    modalModelsList.innerHTML = '';
-    customModelBox.classList.add('hidden');
-
-    models.forEach((m, idx) => {
-        const tile = document.createElement('div');
+    // Populate models list in keys modal
+    keysModelsList.innerHTML = '';
+    (pData.models || []).forEach((m, idx) => {
+        const card = document.createElement('div');
         const isCurrent = m.id === activeModelId || idx === 0;
-        tile.className = `sheet-model-tile ${isCurrent ? 'active' : ''}`;
-        tile.innerHTML = `
-            <div class="sheet-model-main">
-                <span class="sheet-model-name">${escapeHtml(m.name)}</span>
-                <span class="sheet-model-desc">${escapeHtml(m.desc || m.id)}</span>
-            </div>
-            <span class="sheet-model-check">✓</span>
+        card.className = `keys-model-card ${isCurrent ? 'active' : ''}`;
+        card.innerHTML = `
+            <span class="km-title">${escapeHtml(m.name)}</span>
+            <span class="km-check">✓</span>
         `;
-
         if (isCurrent) modalSelectedModel = m.id;
 
-        tile.addEventListener('click', () => {
-            $$('.sheet-model-tile').forEach(t => t.classList.remove('active'));
-            tile.classList.add('active');
+        card.addEventListener('click', () => {
+            $$('.keys-model-card').forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
             modalSelectedModel = m.id;
-            customModelBox.classList.add('hidden');
         });
-
-        modalModelsList.appendChild(tile);
+        keysModelsList.appendChild(card);
     });
-
-    // Custom model tile
-    const customTile = document.createElement('div');
-    customTile.className = 'sheet-model-tile full';
-    customTile.innerHTML = `
-        <div class="sheet-model-main">
-            <span class="sheet-model-name">Custom Model</span>
-            <span class="sheet-model-desc">Enter any model identifier</span>
-        </div>
-        <span class="sheet-model-check">✓</span>
-    `;
-
-    customTile.addEventListener('click', () => {
-        $$('.sheet-model-tile').forEach(t => t.classList.remove('active'));
-        customTile.classList.add('active');
-        customModelBox.classList.remove('hidden');
-        modalSelectedModel = customModelInput.value.trim() || 'custom';
-    });
-
-    modalModelsList.appendChild(customTile);
 }
 
-function saveKeySettings() {
+function saveKeysSettings() {
     const key = modalKeyInput.value.trim();
     if (key) {
         savedKeys[modalSelectedProvider] = key;
         localStorage.setItem('namma_api_keys', JSON.stringify(savedKeys));
     }
 
-    if (customModelBox && !customModelBox.classList.contains('hidden')) {
-        const val = customModelInput.value.trim();
-        if (val) modalSelectedModel = val;
-    }
-
     activeModelId = modalSelectedModel;
     localStorage.setItem('namma_active_model', activeModelId);
 
-    if (modalSelectedBaseUrl) {
-        activeBaseUrl = modalSelectedBaseUrl;
-        localStorage.setItem('namma_active_base_url', activeBaseUrl);
-    }
-
-    syncState(modalSelectedProvider, activeModelId);
+    syncActiveState(modalSelectedProvider, activeModelId, activeEffort);
 }
 
 // ── BIND EVENT LISTENERS ────────────────────────────────
 
 function bindEvents() {
-    // Topbar Dropdown
+    // Popover Trigger
     modelPopoverTrigger.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (modelDropdown.classList.contains('hidden')) {
-            openDropdown();
+        if (modelMenuPanel.classList.contains('hidden')) {
+            openModelPopover();
         } else {
-            closeDropdown();
+            closeModelPopover();
         }
     });
 
-    composerModelSwitchBtn.addEventListener('click', (e) => {
+    composerModelBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        openDropdown();
+        openModelPopover();
     });
 
-    modelSearchInput.addEventListener('input', (e) => {
-        buildDropdownList(e.target.value);
+    // Search filter inside popover
+    modelFilterInput.addEventListener('input', (e) => {
+        buildModelListing(railSelectedProvider, e.target.value);
     });
 
+    // Submenu Triggers
+    effortTriggerRow.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menuContentScroll.classList.add('hidden');
+        effortSubmenu.classList.remove('hidden');
+    });
+
+    effortBackBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeSubmenus();
+    });
+
+    // Effort selection
+    $$('.submenu-item[data-effort]').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const eff = item.dataset.effort;
+            $$('.submenu-item[data-effort]').forEach(i => i.classList.remove('selected'));
+            item.classList.add('selected');
+            activeEffort = eff;
+            localStorage.setItem('namma_active_effort', eff);
+            syncActiveState(activeProviderId, activeModelId, activeEffort);
+            closeModelPopover();
+        });
+    });
+
+    moreModelsRow.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menuContentScroll.classList.add('hidden');
+        legacyModelsSubmenu.classList.remove('hidden');
+    });
+
+    legacyBackBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeSubmenus();
+    });
+
+    // Close on outside click
     document.addEventListener('click', (e) => {
-        if (!modelDropdown.contains(e.target) && !modelPopoverTrigger.contains(e.target) && !composerModelSwitchBtn.contains(e.target)) {
-            closeDropdown();
+        if (!modelMenuPanel.contains(e.target) && !modelPopoverTrigger.contains(e.target) && !composerModelBtn.contains(e.target)) {
+            closeModelPopover();
         }
     });
 
-    // Starter Suggestions
-    $$('.suggestion-tile').forEach(tile => {
-        tile.addEventListener('click', () => {
-            const prompt = tile.dataset.prompt;
+    // Prompt Chips
+    $$('.chip-item').forEach(chip => {
+        chip.addEventListener('click', () => {
+            const prompt = chip.dataset.prompt;
             userInput.value = prompt;
             userInput.style.height = 'auto';
             submitBtn.disabled = false;
@@ -627,7 +655,7 @@ function bindEvents() {
         });
     });
 
-    // Input auto-grow and submit
+    // Input auto-grow & send
     userInput.addEventListener('input', () => {
         userInput.style.height = 'auto';
         userInput.style.height = `${Math.min(userInput.scrollHeight, 160)}px`;
@@ -649,7 +677,7 @@ function bindEvents() {
         if (text) sendMessage(text);
     });
 
-    // Reset / New Chat
+    // New conversation
     newChatBtn.addEventListener('click', resetChat);
 
     document.addEventListener('keydown', (e) => {
@@ -668,18 +696,12 @@ function bindEvents() {
     });
 
     keysModalSaveBtn.addEventListener('click', () => {
-        saveKeySettings();
+        saveKeysSettings();
         closeKeysModal();
         if (pendingMessage) {
             sendMessage(pendingMessage);
             pendingMessage = null;
         }
-    });
-
-    $$('.prov-choice-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            setupKeysModalFor(btn.dataset.providerId);
-        });
     });
 
     toggleKeyMaskBtn.addEventListener('click', () => {
@@ -697,7 +719,7 @@ function bindEvents() {
         if (e.target === shareModal) shareModal.classList.remove('active');
     });
 
-    $$('.btn-copy-link').forEach(btn => {
+    $$('.btn-copy').forEach(btn => {
         btn.addEventListener('click', () => {
             const input = $(btn.dataset.inputId);
             if (input) {
@@ -714,12 +736,12 @@ function bindEvents() {
         });
     });
 
-    // Escape closes modals
+    // Escape closes popover & modals
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
+            closeModelPopover();
             closeKeysModal();
             shareModal.classList.remove('active');
-            closeDropdown();
         }
     });
 }
@@ -730,8 +752,8 @@ function resetChat() {
     }
     chatMemory = [];
     localStorage.removeItem('namma_chat_memory');
-    conversationStream.innerHTML = '';
-    quietHero.classList.remove('hidden');
+    messagesContainer.innerHTML = '';
+    editorialHero.classList.remove('hidden');
     updateMemoryUI();
     userInput.focus();
 }

@@ -6,89 +6,193 @@
     <title>nammaAPI</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <div class="workspace">
-        <!-- TOP NAVIGATION -->
+        <!-- TOP NAVIGATION BAR -->
         <header class="topbar">
             <div class="topbar-left">
-                <a href="/" class="brand-mark" title="nammaAPI">
-                    <span class="brand-monogram">n</span>
-                    <span class="brand-text">nammaAPI</span>
+                <a href="/" class="brand-link" title="nammaAPI">
+                    <span class="brand-badge">n</span>
+                    <span class="brand-title">nammaAPI</span>
                 </a>
 
-                <div class="model-picker-wrap">
-                    <button type="button" class="model-selector-btn" id="model-popover-trigger">
-                        <span class="active-prov-dot" id="active-prov-dot"></span>
-                        <span class="active-model-text" id="active-model-text">Claude 3.5 Sonnet</span>
-                        <svg class="chevron-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <!-- ACTIVE MODEL & EFFORT DROPDOWN TRIGGER -->
+                <div class="popover-anchor">
+                    <button type="button" class="model-pill-btn" id="model-popover-trigger">
+                        <span class="pill-logo-box" id="header-logo-box"></span>
+                        <span class="pill-name" id="header-model-name">Claude 3.7 Sonnet</span>
+                        <span class="pill-effort-tag" id="header-effort-tag">Medium</span>
+                        <svg class="chevron-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                             <path d="M6 9l6 6 6-6"/>
                         </svg>
                     </button>
 
-                    <!-- MODEL SELECTION MENU -->
-                    <div class="model-dropdown hidden" id="model-dropdown">
-                        <div class="dropdown-search">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="11" cy="11" r="8"></circle>
-                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                            </svg>
-                            <input type="text" id="model-search-input" placeholder="Find a model..." autocomplete="off">
+                    <!-- MODEL SELECTION POPOVER DIALOG -->
+                    <div class="model-menu-panel hidden" id="model-menu-panel">
+                        <!-- PROVIDER SELECTOR TABS -->
+                        <div class="provider-rail" id="provider-rail"></div>
+
+                        <!-- MODELS LISTING VIEW -->
+                        <div class="model-stage">
+                            <!-- SEARCH BAR -->
+                            <div class="menu-search-wrap">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                </svg>
+                                <input type="text" id="model-filter-input" placeholder="Search all models or versions..." autocomplete="off">
+                            </div>
+
+                            <!-- FEATURED MODELS -->
+                            <div class="menu-content-scroll" id="menu-content-scroll">
+                                <div class="featured-models-list" id="featured-models-list"></div>
+
+                                <!-- EFFORT SELECTOR ROW -->
+                                <div class="effort-trigger-row" id="effort-trigger-row">
+                                    <div class="effort-left">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <polyline points="12 6 12 12 16 14"></polyline>
+                                        </svg>
+                                        <span>Thinking Effort</span>
+                                    </div>
+                                    <div class="effort-right">
+                                        <span id="current-effort-label">Medium</span>
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                                    </div>
+                                </div>
+
+                                <!-- MORE MODELS (ALL RELEASED VERSIONS) EXPANDER -->
+                                <div class="more-models-row" id="more-models-row">
+                                    <div class="more-left">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <rect x="3" y="3" width="7" height="7"></rect>
+                                            <rect x="14" y="3" width="7" height="7"></rect>
+                                            <rect x="14" y="14" width="7" height="7"></rect>
+                                            <rect x="3" y="14" width="7" height="7"></rect>
+                                        </svg>
+                                        <span>All Released Versions</span>
+                                    </div>
+                                    <div class="more-right">
+                                        <span id="more-models-count"></span>
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SUBMENU: EFFORT LEVELS -->
+                            <div class="submenu-panel hidden" id="effort-submenu">
+                                <div class="submenu-header">
+                                    <button type="button" class="submenu-back-btn" id="effort-back-btn">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+                                        <span>Effort Level</span>
+                                    </button>
+                                </div>
+                                <div class="submenu-list">
+                                    <div class="submenu-item" data-effort="none">
+                                        <div class="sub-item-meta">
+                                            <span class="sub-item-title">None</span>
+                                            <span class="sub-item-desc">Fast response without extended chain of thought</span>
+                                        </div>
+                                        <span class="sub-check">✓</span>
+                                    </div>
+                                    <div class="submenu-item" data-effort="low">
+                                        <div class="sub-item-meta">
+                                            <span class="sub-item-title">Low</span>
+                                            <span class="sub-item-desc">Brief internal reasoning for quick answers</span>
+                                        </div>
+                                        <span class="sub-check">✓</span>
+                                    </div>
+                                    <div class="submenu-item selected" data-effort="medium">
+                                        <div class="sub-item-meta">
+                                            <span class="sub-item-title">Medium</span>
+                                            <span class="sub-item-desc">Balanced depth for everyday tasks and logic</span>
+                                        </div>
+                                        <span class="sub-check">✓</span>
+                                    </div>
+                                    <div class="submenu-item" data-effort="high">
+                                        <div class="sub-item-meta">
+                                            <span class="sub-item-title">High</span>
+                                            <span class="sub-item-desc">Deep reflection for complex architecture & STEM</span>
+                                        </div>
+                                        <span class="sub-check">✓</span>
+                                    </div>
+                                    <div class="submenu-item" data-effort="max">
+                                        <div class="sub-item-meta">
+                                            <span class="sub-item-title">Max</span>
+                                            <span class="sub-item-desc">Maximum allowable reasoning tokens</span>
+                                        </div>
+                                        <span class="sub-check">✓</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SUBMENU: ALL RELEASED VERSIONS -->
+                            <div class="submenu-panel hidden" id="legacy-models-submenu">
+                                <div class="submenu-header">
+                                    <button type="button" class="submenu-back-btn" id="legacy-back-btn">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+                                        <span id="legacy-submenu-title">All Released Models</span>
+                                    </button>
+                                </div>
+                                <div class="submenu-list" id="legacy-models-list"></div>
+                            </div>
                         </div>
-                        <div class="dropdown-list" id="dropdown-models-list"></div>
                     </div>
                 </div>
             </div>
 
             <div class="topbar-right">
-                <div class="memory-status" id="memory-status-badge" title="Memory is preserved when you switch models">
-                    <span class="memory-indicator-dot" id="memory-indicator-dot"></span>
-                    <span id="memory-status-text">Shared context</span>
+                <!-- SHARED MEMORY INDICATOR -->
+                <div class="memory-pill" id="memory-pill" title="Cross-model context retention active">
+                    <span class="memory-dot" id="memory-dot"></span>
+                    <span id="memory-count-label">Shared memory</span>
                 </div>
 
-                <div class="topbar-divider"></div>
+                <div class="nav-sep"></div>
 
-                <button type="button" class="text-nav-btn" id="open-share-btn">Share</button>
-                <button type="button" class="text-nav-btn" id="open-keys-btn">API Keys</button>
-                <button type="button" class="text-nav-btn" id="new-chat-btn" title="Clear conversation (Cmd+K)">New</button>
+                <button type="button" class="nav-btn" id="open-share-btn">Share</button>
+                <button type="button" class="nav-btn" id="open-keys-btn">API Keys</button>
+                <button type="button" class="nav-btn" id="new-chat-btn" title="New conversation (⌘K)">New</button>
             </div>
         </header>
 
-        <!-- MAIN CONVERSATION CANVAS -->
+        <!-- MAIN VIEWPORT -->
         <main class="chat-viewport" id="chat-viewport">
             <div class="chat-column">
-                <!-- CALM EDITORIAL EMPTY STATE -->
-                <div class="quiet-hero" id="quiet-hero">
-                    <div class="quiet-brand-emblem">n</div>
-                    <h1 class="quiet-title">What would you like to explore?</h1>
-                    <p class="quiet-subtitle">Claude, Gemini, OpenAI, and DeepSeek in one conversation. Your chat history stays with you when you switch models.</p>
+                <!-- HERO EMPTY STATE -->
+                <div class="editorial-hero" id="editorial-hero">
+                    <div class="hero-logo-icon" id="hero-provider-logo"></div>
+                    <h1 class="hero-title">What would you like to build or explore?</h1>
+                    <p class="hero-desc">Switch seamlessly between Claude, OpenAI, Gemini, DeepSeek, Grok, Perplexity, Llama, and Qwen. Conversation context is preserved across all models.</p>
 
-                    <div class="starter-suggestions">
-                        <button type="button" class="suggestion-tile" data-prompt="Analyze the trade-offs between Claude 3.5 Sonnet and GPT-4o for engineering work.">
-                            <span class="suggestion-tag">Comparison</span>
-                            <span class="suggestion-text">Claude 3.5 Sonnet vs GPT-4o for engineering</span>
+                    <div class="prompt-chips">
+                        <button type="button" class="chip-item" data-prompt="Analyze the trade-offs between Claude 3.7 Sonnet, GPT-4o, and DeepSeek-R1 for complex system design.">
+                            <span class="chip-label">Comparison</span>
+                            <span class="chip-title">Compare Claude 3.7 vs GPT-4o vs DeepSeek-R1</span>
                         </button>
-                        <button type="button" class="suggestion-tile" data-prompt="Write an idiomatic Python script that parses CSVs and streams summary metrics.">
-                            <span class="suggestion-tag">Code</span>
-                            <span class="suggestion-text">Write a clean Python CSV streaming parser</span>
+                        <button type="button" class="chip-item" data-prompt="Write a production-grade async Python pipeline with retry backoff and error handling.">
+                            <span class="chip-label">Code</span>
+                            <span class="chip-title">Write an async Python streaming worker</span>
                         </button>
-                        <button type="button" class="suggestion-tile" data-prompt="Explain the key ideas of quantum key distribution in plain terms.">
-                            <span class="suggestion-tag">Concept</span>
-                            <span class="suggestion-text">Explain quantum key distribution simply</span>
+                        <button type="button" class="chip-item" data-prompt="Explain quantum key distribution protocols and how entanglement secures communications.">
+                            <span class="chip-label">Concept</span>
+                            <span class="chip-title">Explain quantum cryptography in detail</span>
                         </button>
                     </div>
                 </div>
 
-                <!-- MESSAGES LIST -->
-                <div class="conversation-stream" id="conversation-stream"></div>
+                <!-- CONVERSATION STREAM -->
+                <div class="messages-container" id="messages-container"></div>
             </div>
         </main>
 
         <!-- FLOATING INPUT COMPOSER -->
-        <div class="composer-container">
+        <div class="composer-wrap">
             <div class="composer-card">
                 <form id="chat-form" class="composer-form">
                     <textarea
@@ -97,18 +201,18 @@
                         placeholder="Message nammaAPI..."
                         autocomplete="off"
                     ></textarea>
-                    <div class="composer-bar">
-                        <div class="composer-bar-left">
-                            <button type="button" class="composer-model-tag" id="composer-model-switch-btn">
-                                <span class="tag-dot" id="composer-prov-dot"></span>
-                                <span id="composer-model-name">Claude 3.5 Sonnet</span>
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+
+                    <div class="composer-footer">
+                        <div class="composer-footer-left">
+                            <button type="button" class="composer-model-btn" id="composer-model-btn">
+                                <span class="composer-logo-box" id="composer-logo-box"></span>
+                                <span id="composer-model-title">Claude 3.7 Sonnet</span>
+                                <span class="composer-effort-chip" id="composer-effort-chip">Medium</span>
                             </button>
-                            <span class="composer-context-label" id="composer-context-label">Context active</span>
                         </div>
-                        <div class="composer-bar-right">
-                            <span class="keyboard-hint">Return to send</span>
-                            <button type="submit" id="submit-btn" class="send-arrow-btn" disabled title="Send">
+
+                        <div class="composer-footer-right">
+                            <button type="submit" id="submit-btn" class="send-circle-btn" disabled title="Send">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                                     <line x1="12" y1="19" x2="12" y2="5"></line>
                                     <polyline points="5 12 12 5 19 12"></polyline>
@@ -122,133 +226,119 @@
     </div>
 
     <!-- API KEYS MODAL -->
-    <div id="keys-modal" class="sheet-scrim">
-        <div class="sheet-modal">
-            <div class="sheet-head">
+    <div id="keys-modal" class="modal-backdrop">
+        <div class="modal-window">
+            <div class="modal-top">
                 <div>
-                    <h2 class="sheet-title">API Keys</h2>
-                    <p class="sheet-desc">Keys are stored on this device in your browser. Requests proxy directly to provider APIs.</p>
+                    <h2 class="modal-title">API Keys</h2>
+                    <p class="modal-desc">Stored exclusively in your browser localStorage. Keys are sent directly to provider APIs.</p>
                 </div>
-                <button type="button" class="sheet-close-btn" id="keys-modal-close-btn" title="Close (Esc)">
+                <button type="button" class="close-icon-btn" id="keys-modal-close-btn" title="Close (Esc)">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
 
-            <div class="sheet-body">
-                <!-- PROVIDER SELECTOR -->
-                <div class="sheet-field-group">
-                    <label class="sheet-field-label">Provider</label>
-                    <div class="provider-button-group">
-                        <button type="button" class="prov-choice-btn active" data-provider-id="claude">Anthropic</button>
-                        <button type="button" class="prov-choice-btn" data-provider-id="gemini">Google</button>
-                        <button type="button" class="prov-choice-btn" data-provider-id="openai">OpenAI</button>
-                        <button type="button" class="prov-choice-btn" data-provider-id="other">DeepSeek / Custom</button>
-                    </div>
-                </div>
-
-                <!-- SUB-PLATFORM (IF OTHER) -->
-                <div id="sub-platform-box" class="sheet-field-group hidden">
-                    <label class="sheet-field-label">Platform</label>
-                    <div id="sub-pills-row" class="sub-platform-pills"></div>
-                    <div id="custom-url-box" class="field-sub-group hidden">
-                        <label for="custom-url-input">OpenAI-compatible Base URL</label>
-                        <input type="text" id="custom-url-input" class="quiet-input" placeholder="http://localhost:11434/v1/chat/completions">
-                    </div>
+            <div class="modal-scroll-body">
+                <!-- PROVIDER TABS -->
+                <div class="field-block">
+                    <label class="field-tag">Select Provider</label>
+                    <div class="keys-provider-grid" id="keys-provider-grid"></div>
                 </div>
 
                 <!-- MODEL SELECTION -->
-                <div class="sheet-field-group">
-                    <label class="sheet-field-label">Model</label>
-                    <div id="modal-models-list" class="sheet-models-list"></div>
-                    <div id="custom-model-box" class="field-sub-group hidden">
+                <div class="field-block">
+                    <label class="field-tag">Active Model</label>
+                    <div class="keys-model-select-row" id="keys-models-list"></div>
+                    <div id="custom-model-row" class="field-sub-group hidden">
                         <label for="custom-model-input">Custom Model Name</label>
-                        <input type="text" id="custom-model-input" class="quiet-input" placeholder="e.g. deepseek-ai/deepseek-r1">
+                        <input type="text" id="custom-model-input" class="text-input" placeholder="e.g. deepseek-ai/deepseek-r1">
                     </div>
                 </div>
 
                 <!-- KEY INPUT -->
-                <div class="sheet-field-group">
-                    <div class="field-label-row">
-                        <label class="sheet-field-label" for="modal-key-input">API Key for <span id="modal-key-provider-title">Anthropic</span></label>
-                        <span id="key-configured-badge" class="badge-configured hidden">Saved on this device</span>
+                <div class="field-block">
+                    <div class="label-row">
+                        <label class="field-tag" for="modal-key-input">API Key for <span id="modal-key-provider-title">Claude</span></label>
+                        <span id="key-saved-badge" class="badge-saved hidden">✓ Configured</span>
                     </div>
-                    <div class="input-with-button">
-                        <input type="password" id="modal-key-input" class="quiet-input font-mono" placeholder="sk-ant-...">
-                        <button type="button" class="toggle-mask-btn" id="toggle-key-mask-btn" title="Toggle key visibility">
+                    <div class="input-mask-wrap">
+                        <input type="password" id="modal-key-input" class="text-input font-mono" placeholder="sk-ant-...">
+                        <button type="button" class="mask-toggle-btn" id="toggle-key-mask-btn" title="Show/hide key">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                 <circle cx="12" cy="12" r="3"></circle>
                             </svg>
                         </button>
                     </div>
-                    <p class="field-helper">Keys remain in your browser localStorage. <a href="https://console.anthropic.com/" target="_blank" rel="noreferrer" id="portal-external-link">Get key from provider console ↗</a></p>
+                    <p class="field-hint"><a href="https://console.anthropic.com/" target="_blank" rel="noreferrer" id="portal-external-link">Get key from console ↗</a></p>
                 </div>
             </div>
 
-            <div class="sheet-footer">
-                <button type="button" class="btn-cancel" id="keys-modal-cancel-btn">Cancel</button>
-                <button type="button" class="btn-done" id="keys-modal-save-btn">Save and apply</button>
+            <div class="modal-actions">
+                <button type="button" class="btn-ghost" id="keys-modal-cancel-btn">Cancel</button>
+                <button type="button" class="btn-solid" id="keys-modal-save-btn">Save and apply</button>
             </div>
         </div>
     </div>
 
-    <!-- SHARE MODAL -->
-    <div id="share-modal" class="sheet-scrim">
-        <div class="sheet-modal share-width">
-            <div class="sheet-head">
+    <!-- SHARE WORKSPACE MODAL -->
+    <div id="share-modal" class="modal-backdrop">
+        <div class="modal-window share-modal-width">
+            <div class="modal-top">
                 <div>
-                    <h2 class="sheet-title">Share nammaAPI</h2>
-                    <p class="sheet-desc">Use this deployment from any browser, laptop, or phone.</p>
+                    <h2 class="modal-title">Share nammaAPI</h2>
+                    <p class="modal-desc">Access this multi-model studio across all your devices.</p>
                 </div>
-                <button type="button" class="sheet-close-btn" id="share-modal-close-btn" title="Close (Esc)">
+                <button type="button" class="close-icon-btn" id="share-modal-close-btn" title="Close (Esc)">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
 
-            <div class="sheet-body">
-                <div class="share-option-card">
-                    <div class="share-option-header">
-                        <span class="share-status-dot dot-live"></span>
-                        <span class="share-option-title">Live Vercel Production</span>
+            <div class="modal-scroll-body">
+                <div class="share-card-item">
+                    <div class="share-card-head">
+                        <span class="status-indicator-dot dot-live"></span>
+                        <span class="share-card-title">Live Vercel Production</span>
                     </div>
-                    <p class="share-option-subtitle">Global HTTPS link accessible anywhere on the internet.</p>
-                    <div class="share-input-row">
-                        <input type="text" id="public-share-input" class="quiet-input font-mono" readonly value="https://nammaapi.vercel.app">
-                        <button type="button" class="btn-copy-link" data-input-id="public-share-input">Copy</button>
-                    </div>
-                </div>
-
-                <div class="share-option-card">
-                    <div class="share-option-header">
-                        <span class="share-status-dot dot-wifi"></span>
-                        <span class="share-option-title">Local Wi-Fi Network</span>
-                    </div>
-                    <p class="share-option-subtitle">For phones or tablets on the same local network.</p>
-                    <div class="share-input-row">
-                        <input type="text" id="lan-share-input" class="quiet-input font-mono" readonly value="http://192.168.31.195:5000">
-                        <button type="button" class="btn-copy-link" data-input-id="lan-share-input">Copy</button>
+                    <p class="share-card-desc">Global HTTPS link accessible anywhere on the internet.</p>
+                    <div class="copy-box">
+                        <input type="text" id="public-share-input" class="text-input font-mono" readonly value="https://nammaapi.vercel.app">
+                        <button type="button" class="btn-copy" data-input-id="public-share-input">Copy</button>
                     </div>
                 </div>
 
-                <div class="share-option-card">
-                    <div class="share-option-header">
-                        <span class="share-status-dot dot-local"></span>
-                        <span class="share-option-title">Localhost Loopback</span>
+                <div class="share-card-item">
+                    <div class="share-card-head">
+                        <span class="status-indicator-dot dot-lan"></span>
+                        <span class="share-card-title">Local Wi-Fi Network</span>
                     </div>
-                    <p class="share-option-subtitle">Direct browser port on this computer.</p>
-                    <div class="share-input-row">
-                        <input type="text" id="local-share-input" class="quiet-input font-mono" readonly value="http://localhost:5000">
-                        <button type="button" class="btn-copy-link" data-input-id="local-share-input">Copy</button>
+                    <p class="share-card-desc">For phones, iPads, or other devices on your home or office Wi-Fi.</p>
+                    <div class="copy-box">
+                        <input type="text" id="lan-share-input" class="text-input font-mono" readonly value="http://192.168.31.195:5000">
+                        <button type="button" class="btn-copy" data-input-id="lan-share-input">Copy</button>
+                    </div>
+                </div>
+
+                <div class="share-card-item">
+                    <div class="share-card-head">
+                        <span class="status-indicator-dot dot-local"></span>
+                        <span class="share-card-title">Localhost Loopback</span>
+                    </div>
+                    <p class="share-card-desc">Direct browser port on this computer.</p>
+                    <div class="copy-box">
+                        <input type="text" id="local-share-input" class="text-input font-mono" readonly value="http://localhost:5000">
+                        <button type="button" class="btn-copy" data-input-id="local-share-input">Copy</button>
                     </div>
                 </div>
             </div>
 
-            <div class="sheet-footer">
-                <button type="button" class="btn-done" id="share-modal-done-btn">Done</button>
+            <div class="modal-actions">
+                <button type="button" class="btn-solid" id="share-modal-done-btn">Done</button>
             </div>
         </div>
     </div>
 
+    <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="/static/app.js"></script>

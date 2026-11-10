@@ -68,6 +68,7 @@ def chat():
     model_id = data.get("model_id")
     api_key = data.get("api_key", "").strip()
     base_url = data.get("base_url")
+    effort = data.get("effort", "medium")
     messages = data.get("messages", [])
 
     if not provider_id or not model_id:
@@ -79,6 +80,12 @@ def chat():
             "openai": "OPENAI_API_KEY",
             "gemini": "GEMINI_API_KEY",
             "claude": "ANTHROPIC_API_KEY",
+            "deepseek": "DEEPSEEK_API_KEY",
+            "grok": "XAI_API_KEY",
+            "perplexity": "PERPLEXITY_API_KEY",
+            "llama": "GROQ_API_KEY",
+            "qwen": "OPENROUTER_API_KEY",
+            "cursor": "OPENROUTER_API_KEY",
         }
         env_var = env_map.get(provider_id)
         if env_var and os.getenv(env_var):
@@ -94,6 +101,7 @@ def chat():
         model_id=model_id,
         api_key=api_key,
         base_url=base_url,
+        effort=effort,
     )
 
     success, response_text = client.chat(messages)
